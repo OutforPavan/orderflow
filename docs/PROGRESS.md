@@ -31,6 +31,21 @@ The baseline endpoint is `GET /api/learning/status` and returns:
 - [ ] Learner traces bootstrap, request mapping, method execution, and JSON response.
 - [ ] Learner explains Spring Boot's contribution and identifies remaining questions.
 
+## Discussion and reference notes - 2026-09-24
+
+- Discussed how Spring creates the controller: IoC, component scanning,
+  managed beans, default singleton scope, and the request mapping.
+- Prepared deeper startup, bean-lifecycle, and HTTP-processing reference notes
+  in [TECHNICAL-NOTEBOOK.md](TECHNICAL-NOTEBOOK.md), including follow-up answers.
+- Open learner question: what happens if `@RestController` is removed and no
+  alternative registration is added? The learner's answer is still pending.
+- Indexed all 95 questions from the three supplied PDFs in
+  [PDF-COVERAGE.md](PDF-COVERAGE.md), with practical labs and evidence criteria.
+- PDF items covered: 0/95. Broader requirements reviewed complete: 0/14.
+  These are planning counts, not a judgment about the learner's prior experience.
+- Next teaching step remains the Lesson 001 exercise and explanation; the new
+  documentation does not advance the lesson checkpoint automatically.
+
 ## Open questions and next steps
 
 Record the learner's actual explanations and doubts here after the exercise.

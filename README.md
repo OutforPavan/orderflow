@@ -66,6 +66,14 @@ local tool installations, IDE state, and generated build output stay outside com
 
 ## Learning records
 
+The living notes are maintained alongside each lesson. The completion requirement
+covers every question in the three supplied PDFs plus the broader curriculum;
+each item needs live practice, implementation or diagnostic evidence, and a
+reviewed explanation.
+
+- [Technical notebook: internals and follow-up answers](docs/TECHNICAL-NOTEBOOK.md)
+- [All 95 PDF questions and completion tracker](docs/PDF-COVERAGE.md)
+- [Practical lab catalog](docs/LAB-CATALOG.md)
 - [Roadmap](docs/ROADMAP.md)
 - [Progress](docs/PROGRESS.md)
 - [Interview practice](docs/INTERVIEW-NOTES.md)

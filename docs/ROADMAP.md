@@ -4,6 +4,18 @@ Build an order and inventory application with Java 21, beginning with Spring Boo
 4.1.1. Learn one concept at a time by explaining it, implementing a small change
 together, and observing the result. Later lessons may change as questions arise.
 
+## Completion requirements
+
+The [coverage tracker](PDF-COVERAGE.md) maps all 95 questions in the three
+supplied PDFs, retaining their original IDs and pages. Every question requires
+live practice, code/configuration or a diagnostic harness, verification evidence,
+and an explanation reviewed with follow-ups. The original curriculum also stays
+mandatory through the tracker's 14 broader requirements.
+
+Use the [lab catalog](LAB-CATALOG.md) to plan small exercises, and maintain the
+[technical notebook](TECHNICAL-NOTEBOOK.md) in parallel with each active lesson.
+PDF coverage is an end-of-project requirement, not a reason to skip fundamentals.
+
 ## Working rhythm
 
 1. Describe one problem and predict the behavior.
@@ -54,11 +66,14 @@ isolation, concurrency, retries, and the limits of the chosen guarantees.
 | Stage | Separate lessons, introduced gradually | Exit evidence |
 | --- | --- | --- |
 | Spring Security | Filter chain; authentication; authorization; ownership checks; session/token tradeoffs | Explain identity propagation and test unauthenticated, forbidden, and cross-customer requests |
+| Java runtime and concurrency | Java 21 foundations; executors and futures; ThreadLocal; virtual threads; JVM memory and GC | Explain behavior using correctness checks, thread/heap evidence, JFR, and controlled workloads |
 | Operations | Structured logs; health; metrics; deployment configuration | Diagnose an introduced failure from evidence and distinguish liveness from readiness |
 | Cache | Cache-aside reads; keys and TTL; invalidation; cache failures | Demonstrate stale data and defend consistency and failure behavior |
 | Kafka | Events; topics and partitions; consumer groups; offsets; duplicate processing | Explain ordering and delivery semantics and demonstrate an idempotent consumer |
 | Reliable publication | Database/message dual-write failure; transactional outbox; recovery | Reproduce the failure and show eventual recovery without duplicate business effects |
-| Microservices | Boundary selection; one service extraction; timeouts; eventual consistency; compensation | Defend the extraction against its operational cost and explain remote failure handling |
+| Microservices | Boundary selection; one service extraction; contracts; timeouts; retry budgets; circuit breakers; bulkheads; eventual consistency; compensation and payment reconciliation | Defend extraction and demonstrate bounded failures, recovery, and data ownership |
+| Deployment and scheduling | Docker; resource limits; environment drift; build identity; rollback; clustered jobs | Reproduce a deployment difference and duplicate scheduled execution, then verify the chosen fixes |
+| Capstone | Load tests; injected failures; timed incident drills; design defense | Close all question and broader-requirement records with practical evidence and reviewed explanations |
 
 The interview target is sound engineering judgment at a senior level. For each
 stage, explain what was built, why it behaves that way, what can fail, and which

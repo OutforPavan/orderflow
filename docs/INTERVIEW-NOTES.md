@@ -3,6 +3,11 @@
 Use this notebook for explanations the learner has practiced and reviewed.
 An implemented feature is evidence to discuss, not proof of understanding.
 
+For trainer-prepared explanations and collapsible reference answers, use the
+[technical notebook](TECHNICAL-NOTEBOOK.md). Keep this file for the learner's own
+attempts, corrections, and reviewed answers. Link each relevant PDF question ID
+from [the coverage tracker](PDF-COVERAGE.md) when recording an answer.
+
 ## Answer structure
 
 1. **Problem:** What requirement or observed failure motivated the change?
