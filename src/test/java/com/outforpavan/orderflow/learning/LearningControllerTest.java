@@ -24,6 +24,6 @@ class LearningControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(content().contentTypeCompatibleWith("application/json"))
                 .andExpect(jsonPath("$.application").value("orderflow"))
-                .andExpect(jsonPath("$.message").value("Learning Spring Boot one step at a time"));
+                .andExpect(jsonPath("$.message").value("LearningService - Learning Spring Boot one step at a time"));
     }
 }

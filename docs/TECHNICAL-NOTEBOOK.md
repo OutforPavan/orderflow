@@ -6,7 +6,7 @@ observe it in code, then explain its failures and tradeoffs.
 
 **Baseline:** Java 21, Spring Boot 4.1.1, Spring Framework 7.0.9; application code
 at commit `3513f6a`. First notes prepared on 2026-09-24.
-**Current implementation:** Lesson 002 constructor injection (2026-09-25).
+**Current implementation:** Day 1 product/order persistence and transactions (2026-09-25).
 Historical baseline observations are labeled; current wiring is described below.
 
 ## How to use this notebook
@@ -45,6 +45,7 @@ groups teaching into feature blocks while this notebook retains sequential detai
 | 2 | [IoC, controller creation, and bean lifecycle](#beans) | Controller-creation explanation discussed; deeper notes prepared |
 | 3 | [HTTP dispatch and JSON serialization](#http-flow) | Basic request path discussed; deeper notes prepared |
 | 4 | [Constructor injection](#constructor-injection) | Implementation trainer-verified; learner practice pending |
+| 5 | [Day 1: validation, persistence, and transactions](#day-one) | Implementation prepared; see lab record for verification and learner status |
 | Log | [Conversation follow-ups](#follow-up-log) | Open questions and answer references |
 | Later | [Next chapters](#next-chapters) | Planned in curriculum order |
 
@@ -241,7 +242,7 @@ In the current application:
 | --- | --- |
 | Remove `@RestController`, add nothing | Default scanning no longer registers this class |
 | Replace it with `@Component` | A bean exists, but it is not recognized as an annotated MVC controller |
-| Construct it using `new LearningController(new LearningService())` in ordinary code | Separate Java objects exist; Spring does not automatically manage them |
+| Construct it using `new LearningController(new LearningService(new LearningProperties("Manual")))` in ordinary code | Separate Java objects exist; Spring does not automatically manage them |
 
 The second row matters because Framework 7.0.9's `RequestMappingHandlerMapping` expects a controller stereotype; leaving `@GetMapping` alone is insufficient. [Handler detection API](https://docs.spring.io/spring-framework/docs/7.0.9/javadoc-api/org/springframework/web/servlet/mvc/method/annotation/RequestMappingHandlerMapping.html#isHandler(java.lang.Class))
 
@@ -526,6 +527,9 @@ failure to the layer you would inspect and the evidence you would collect.
 
 ## 4. Constructor injection: connecting two managed objects
 
+This chapter describes the Lesson 002 checkpoint. Day 1 additionally injects a
+`LearningProperties` configuration record into the service, as explained in Chapter 5.
+
 **Implemented on 2026-09-25; missing-service prediction reviewed, live practice and remaining explanations pending.**
 Use [Lesson 002](lessons/002-constructor-injection.md) for the guided code walk-through
 and six follow-up answers. The [lab record](labs/B03-001-constructor-injection.md)
@@ -604,9 +608,103 @@ out of shared mutable fields as the application grows.
 argument, and when `message()` is invoked. Then explain the different outcomes
 of a missing service and a controller that was never registered.
 
+<a id="day-one"></a>
+
+## 5. Day 1: from validated input to a database transaction
+
+Use the [guided lesson](lessons/003-day-one-order-flow.md) and
+[verification record](labs/DAY1-order-flow.md) together. Implementation and trainer
+checks do not close the learner's run/explain checkpoints.
+
+### 5.1 Configuration supplies values as well as collaborators
+
+`LearningProperties` is a record registered through `@EnableConfigurationProperties`.
+Boot binds `learning.message`, validates its nonblank constraint, and supplies the
+result to `LearningService`. The string moved out of Java source; constructor
+injection still connects the objects. Our packaged smoke exercise compares the
+file default, an environment override, and a command-line override. This setup
+reads configuration at startup; editing a file does not automatically rebind the
+existing bean. [External configuration](https://docs.spring.io/spring-boot/reference/features/external-config.html)
+
+### 5.2 HTTP contracts and the boundary of validation
+
+```text
+JSON → request record → validation → controller → service → repository
+                                                       ↓
+JSON ← response record ← mapping inside transaction ← managed entity / SQL
+```
+
+The API accepts `CreateProductRequest` and `CreateOrderRequest`, not entities.
+`@Valid` asks MVC to validate the converted request before invoking the controller
+method. Nullable wrappers plus `@NotNull` distinguish missing numeric input from
+zero. Shape/type errors and validation failures are different paths that both
+produce a deliberate 400 response here. `ApiExceptionHandler` maps expected
+application failures to problem responses; it does not make invalid business
+operations successful. [MVC validation](https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-controller/ann-validation.html)
+
+Database constraints remain useful even when HTTP input is valid: another caller
+or a future code path can bypass that HTTP boundary. `ProblemDetail` separates
+HTTP error information from Java exception internals; field errors omit rejected
+values. A repository exception translation layer and an HTTP advice handler solve
+different problems. [Error responses](https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-ann-rest-exceptions.html)
+
+### 5.3 Repository, persistence context, and schema have different roles
+
+Spring Data supplies the repository implementation. Hibernate manages entities
+within a persistence context and translates state changes into SQL. PostgreSQL
+stores durable rows. Flyway applies the versioned SQL migration, and Hibernate
+uses `ddl-auto=validate` to check mappings rather than mutate the schema.
+`open-in-view=false` keeps persistence work inside the service boundaries.
+[Database initialization](https://docs.spring.io/spring-boot/how-to/data-initialization.html)
+
+`ProductService.changePrice` loads a managed entity and changes its price inside
+a transaction. It does not need another repository `save` to make that managed
+state eligible for synchronization. The post-call JDBC assertion checks committed
+state independently of an entity cached in the persistence context. This example
+does not imply that changing a detached object will update the database.
+[Spring Data transaction boundaries](https://docs.spring.io/spring-data/jpa/reference/jpa/transactions.html)
+
+### 5.4 Follow the transaction, not just the annotation
+
+An external call reaches Spring's transactional service proxy. For our create-order
+method it begins or joins the database transaction, invokes the target method,
+and completes the transaction before the caller receives a normal result.
+The method loads the product, reserves stock, flushes its UPDATE, and saves the
+order using the stored product price. Both repositories participate in that
+service transaction. Runtime failure on the exercised path leads to rollback.
+Checked exceptions and self-invocation need the separate Day 2 experiments.
+[Transactional interception](https://docs.spring.io/spring-framework/reference/data-access/transaction/declarative/annotations.html)
+
+The explicit `products.flush()` exists to make SQL ordering observable in this
+lab. It is not a recommendation to flush after every change. **Flush is not
+commit.** An UPDATE can have executed and still be undone when the encompassing
+transaction rolls back.
+
+The integration drill creates a trigger only in `orderflow_test`. During the
+order INSERT, that trigger verifies the changed stock is visible in the current
+transaction, then raises an exception. Assertions after the service call verify
+the original stock and absence of the order. There is no test-managed outer
+transaction masking the service's real completion boundary. The trigger is
+removed in cleanup. [PostgreSQL trigger timing](https://www.postgresql.org/docs/current/sql-createtrigger.html)
+
+### 5.5 Limits to defend in an interview
+
+- Atomicity of this one transaction does not prevent two concurrent requests
+  from reading the same stock. Concurrency protection is a Day 2 implementation.
+- A client retry can create another order. HTTP idempotency is still a separate lab.
+- Product and order use one database; this demonstrates no distributed transaction.
+- Order prices are snapshots calculated by the server using `BigDecimal`.
+  This lesson assumes one currency; a currency/conversion model is not implemented.
+- Passing MVC tests with a mocked service proves the HTTP boundary, not SQL rollback.
+  The PostgreSQL integration tests and packaged HTTP/restart harness exercise those
+  separate boundaries.
+
+Follow-up answers and learner exercises are in the guided lesson. Record the
+learner's own explanations in [INTERVIEW-NOTES.md](INTERVIEW-NOTES.md).
+
 <a id="follow-up-log"></a>
 
-## 5. Conversation follow-up log
+## 6. Conversation follow-up log
 
 This records what was asked and what remains open. A reference answer is not a
 substitute for a learner explanation.
@@ -628,7 +726,7 @@ questions visible until the learner can reason through a changed example.
 
 <a id="next-chapters"></a>
 
-## 6. Next chapters, added as we learn
+## 7. Next chapters, added as we learn
 
 These are chapter commitments, not completed explanations or implemented features.
 Lab families are deliberately split into small exercises when their turn arrives.
@@ -658,7 +756,7 @@ The [coverage tracker](PDF-COVERAGE.md) ties the provided PDFs to these chapters
 and also lists requirements beyond the PDFs. It is the completion checklist;
 this notebook is the explanation and revision reference.
 
-## 7. How we maintain the notes
+## 8. How we maintain the notes
 
 During each active lesson, prepare or review the relevant notes in parallel with
 independent implementation work when useful. Integrate the result into this

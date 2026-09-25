@@ -4,6 +4,8 @@ HELP.md
 .env.*
 !.env.example
 *.log
+__pycache__/
+*.pyc
 .DS_Store
 *.jks
 *.p12

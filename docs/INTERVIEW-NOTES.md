@@ -64,3 +64,24 @@ startup diagnostic and successful runtime recovery have not been reported. Other
 pending. Follow-up to revisit: would explicit registration through `@Bean` or
 `@Import` change the outcome? Reference answers remain in
 [Lesson 002](lessons/002-constructor-injection.md).
+
+## Day 1 - request to durable order
+
+Status: implementation prepared; learner practice and answers pending.
+Use [the lesson](lessons/003-day-one-order-flow.md) and
+[observed verification](labs/DAY1-order-flow.md) as references.
+
+- Why keep a request DTO separate from a JPA entity?
+- Where does request validation run, and why also keep database constraints?
+- Who implements `ProductRepository`, and what does Hibernate do?
+- Why can `changePrice` persist an update without another `save` call?
+- Why does the order service own the transaction instead of only the controller
+  or each repository method independently?
+- A product starts with stock 10; reserving 3 succeeds but saving the order fails.
+  What stock remains after one transaction rolls back, and why?
+- How do the tests prove that stock SQL ran, and that the observation is after
+  the actual service transaction ended?
+- Why does this atomicity test not prove protection against overselling or duplicate retries?
+
+The transaction prediction was requested during implementation; response and
+review are pending. No Day 1 understanding or full PDF scenario is marked complete.

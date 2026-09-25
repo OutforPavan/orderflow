@@ -1,0 +1,48 @@
+@baseUrl = http://localhost:8080
+
+### 1. Existing endpoint; change learning.message through configuration.
+GET {{baseUrl}}/api/learning/status
+
+### 2. Create a product. Save its returned ID for the next requests.
+POST {{baseUrl}}/api/products
+Content-Type: application/json
+
+{"name":"Mechanical keyboard","price":1250.00,"stock":10}
+
+> {% client.global.set("productId", response.body.id); %}
+
+### 3. Read the product (also repeat after restarting the application).
+GET {{baseUrl}}/api/products/{{productId}}
+
+### 4. Invalid input: expect 400 and fieldErrors.
+POST {{baseUrl}}/api/products
+Content-Type: application/json
+
+{"name":"","price":-1,"stock":-1}
+
+### 5. Dirty checking: change price, then repeat request 3.
+PATCH {{baseUrl}}/api/products/{{productId}}/price
+Content-Type: application/json
+
+{"price":1199.00}
+
+### 6. Create an order: expect total 2398.00 and product stock 8.
+# These expectations assume a fresh product and one run of requests 5 and 6.
+POST {{baseUrl}}/api/orders
+Content-Type: application/json
+
+{"productId":{{productId}},"quantity":2}
+
+> {% client.global.set("orderId", response.body.id); %}
+
+### 7. Read the order.
+GET {{baseUrl}}/api/orders/{{orderId}}
+
+### 8. Insufficient stock: expect 409; repeat request 3 to inspect unchanged stock.
+POST {{baseUrl}}/api/orders
+Content-Type: application/json
+
+{"productId":{{productId}},"quantity":100}
+
+### 9. Missing resource: expect 404.
+GET {{baseUrl}}/api/products/9223372036854775807

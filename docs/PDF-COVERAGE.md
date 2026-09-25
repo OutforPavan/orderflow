@@ -77,10 +77,10 @@ list alone is not a completeness test for the original curriculum.
 | ID | Required area | Lab families | State |
 | --- | --- | --- | --- |
 | EXT01 | Java 21 and Spring fundamentals, IoC, DI, lifecycle, configuration | J04, B01-B04 | In progress: first constructor-injection step |
-| EXT02 | REST design, DTOs, validation, errors, pagination | A01, B05 | Planned |
-| EXT03 | SQL, PostgreSQL, schema migrations, constraints and indexes | D00, D02 | Planned |
-| EXT04 | JPA lifecycle, persistence context, relationships, fetching, dirty checking | D00, D02 | Planned |
-| EXT05 | Transactions, proxies, rollback, propagation, isolation, flush/commit | D01, D03 | Planned |
+| EXT02 | REST design, DTOs, validation, errors, pagination | A01, B05 | In progress: Day 1 product/order contracts; pagination and learner review pending |
+| EXT03 | SQL, PostgreSQL, schema migrations, constraints and indexes | D00, D02 | In progress: Day 1 schema and constraints; deeper SQL and learner review pending |
+| EXT04 | JPA lifecycle, persistence context, relationships, fetching, dirty checking | D00, D02 | In progress: Day 1 persistence and managed update; relationships/fetching and learner review pending |
+| EXT05 | Transactions, proxies, rollback, propagation, isolation, flush/commit | D01, D03 | In progress: Day 1 atomicity/flush drill; wider transaction matrix and learner review pending |
 | EXT06 | Concurrent correctness, locks, duplicate requests and retries | D03, D04, J01 | Planned |
 | EXT07 | Spring Security, authentication, authorization, ownership, sessions/tokens, CSRF/CORS | X01 | Planned |
 | EXT08 | Caching, TTL, invalidation, races, stampedes and outages | C01 | Planned |
@@ -88,7 +88,7 @@ list alone is not a completeness test for the original curriculum.
 | EXT10 | Reliable event publication, outbox, idempotent consumption and recovery | K02, K03 | Planned |
 | EXT11 | Microservice boundaries, contracts, resilience and distributed workflows | X02, R01, R02 | Planned |
 | EXT12 | Observability, deployment, capacity, scheduling and incident diagnosis | O01-O04, S01 | Planned |
-| EXT13 | Unit/integration/contract testing, reproducible environments and delivery | X03 | Planned |
+| EXT13 | Unit/integration/contract testing, reproducible environments and delivery | X03 | In progress: Day 1 unit/MVC/PostgreSQL/restart checks; delivery and broader contract checks pending |
 | EXT14 | JVM/GC, memory domains, executors, futures, locks, ThreadLocal and virtual threads | J01-J04 | Planned |
 
 The project is complete when all 95 PDF items and all 14 broader requirements
@@ -96,6 +96,10 @@ meet their evidence criteria, and the final capstone in the lab catalog has been
 reviewed. Add new requirements explicitly when we agree to expand the curriculum.
 
 ## Question index
+
+The [Day 1 evidence record](labs/DAY1-order-flow.md) supports introductory work in
+EXT01-05. None of the complete PDF scenarios is closed by this increment; broader
+configuration, rollback-rule, performance, and concurrency experiments remain open.
 
 The IDs below remain stable even if we change lesson order. Lab-family links go
 to the shared catalog; each entry supplies the question-specific exercise.

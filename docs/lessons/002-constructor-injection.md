@@ -4,6 +4,10 @@
 
 ## The problem and the change
 
+The examples below describe the `lesson-002-constructor-injection` checkpoint.
+The [Day 1 implementation](003-day-one-order-flow.md) additionally injects
+`LearningProperties` into this service and moves the text into configuration.
+
 The controller now asks a `LearningService` for the learning message. It still handles the HTTP route and constructs the response record. This small refactor makes object collaboration visible before we add business rules.
 
 A **dependency** is an object another object needs to do its work. **Dependency injection** means supplying that collaborator from outside. Our controller receives its service through its constructor; Spring supplies the argument when creating the controller. [Spring dependency injection](https://docs.spring.io/spring-framework/reference/core/beans/dependencies/factory-collaborators.html)

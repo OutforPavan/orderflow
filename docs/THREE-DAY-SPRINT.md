@@ -5,8 +5,8 @@ exactly 180 minutes, including a ten-minute break. Day labels are session number
 specific start times have not been agreed. No extra learner homework is assumed.
 
 Working preference: build one narrow end-to-end flow across the main topics.
-The learner was also offered a core-Spring-focused alternative; no choice has
-been received yet. Adjust this plan if that preference changes.
+On 2026-09-25 the learner asked to start implementation and finish Day 1 today,
+so Day 1 is active. Completion still requires the learner practice and review below.
 
 ## What finishing this sprint means
 

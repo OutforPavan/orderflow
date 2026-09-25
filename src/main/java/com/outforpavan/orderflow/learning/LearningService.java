@@ -5,7 +5,13 @@ import org.springframework.stereotype.Service;
 @Service
 public class LearningService {
 
+    private final LearningProperties properties;
+
+    public LearningService(LearningProperties properties) {
+        this.properties = properties;
+    }
+
     public String message() {
-        return "LearningService - Learning Spring Boot one step at a time";
+        return properties.message();
     }
 }

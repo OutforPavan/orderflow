@@ -11,8 +11,12 @@
 - Understanding demonstrated: missing-service startup prediction reviewed as
   correct; refine the lookup owner to Spring's container. Other explanations remain open.
 - Current pace: [three-day sprint](THREE-DAY-SPRINT.md), three hours per day.
-- Current next step: observe and restore the missing-service experiment, then
-  start the Day 1 REST/product feature block. Live failure/recovery is not yet recorded.
+- Current implementation: Day 1 product/order APIs, external configuration,
+  PostgreSQL migrations, JPA, and transaction rollback. Trainer verification passed:
+  43 tests plus real HTTP requests and application-restart persistence.
+- Current next step: run the prepared Day 1 requests and transaction drill with
+  the learner, then review the mechanism and failure outcomes. Earlier unobserved
+  failure/recovery steps remain open; faster pacing does not close them automatically.
 
 ## Baseline verification — 2026-09-24
 
@@ -71,6 +75,30 @@ The baseline endpoint is `GET /api/learning/status` and returns:
   mark earlier unanswered checkpoints complete.
 
 ## Open questions and next steps
+
+### Day 1 implementation and verification - 2026-09-25
+
+- Implemented the Day 1 feature scope requested by the learner: externalized
+  message, product REST/validation/error contracts, PostgreSQL/Flyway/JPA,
+  dirty-checking price change, and atomic single-product order creation.
+- Preserved the learner's committed `LearningService - ` message prefix from
+  baseline `a5c72db`, moving the value into configuration and aligning its HTTP test.
+- Prepared project-local PostgreSQL 17.11 with a verified installer checksum;
+  `orderflow` and `orderflow_test` are separate. Generated settings and data stay ignored.
+- `./dev verify`: 43 tests, 0 failures/errors/skips. The rollback trigger verified
+  the stock UPDATE was visible before raising the order-insert failure; after the
+  service transaction ended, stock was unchanged and no order was stored.
+- `python3 scripts/day1-smoke.py`: actual HTTP create/read/update, validation,
+  404/409, server-calculated totals, restart persistence, and environment/CLI
+  configuration overrides passed. Only its two temporary app processes were stopped.
+- The project-local PostgreSQL server remains running for learner practice.
+  Use `./scripts/db stop` after stopping the development application.
+- [Day 1 lab evidence](labs/DAY1-order-flow.md), [lesson](lessons/003-day-one-order-flow.md),
+  and [IntelliJ requests](../requests/day1.http) are ready.
+- Learner Day 1 runs and explanations remain pending, including the transaction
+  prediction requested during implementation. Do not mark the study day complete
+  solely from these trainer checks. Actual learner study minutes are not measured.
+- EXT01-05 are in progress; 0/95 PDF items and 0/14 broader areas are fully covered.
 
 ### Learner review and accelerated pace - 2026-09-25
 

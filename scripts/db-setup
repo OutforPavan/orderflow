@@ -1,0 +1,54 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Download the pinned native macOS distribution listed by postgresql.org.
+# https://www.postgresql.org/download/macosx/
+# https://github.com/PostgresApp/PostgresApp/releases/tag/v2.9.6
+# SHA-256 is the publisher's GitHub release-asset digest, checked before mounting.
+# Everything is stored below ignored .tools; no global service is installed.
+
+project_root="$(cd "$(dirname "$0")/.." && pwd)"
+install_dir="$project_root/.tools/postgres"
+pg_bin="$install_dir/Postgres.app/Contents/Versions/17/bin"
+download_dir="$project_root/.tools/postgres-download"
+archive="$download_dir/Postgres-2.9.6-17.dmg"
+mount_dir="$download_dir/mount"
+archive_url='https://github.com/PostgresApp/PostgresApp/releases/download/v2.9.6/Postgres-2.9.6-17.dmg'
+expected_sha='b38bb00b8c8702a568270aab85995c550f7f93d1503b818efdc5ff9a519b7168'
+mounted=false
+
+fail() { printf '%s\n' "$*" >&2; exit 1; }
+
+cleanup() {
+  if [[ "$mounted" == true ]]; then
+    hdiutil detach "$mount_dir" -quiet || printf 'Please eject the installer volume at %s.\n' "$mount_dir" >&2
+  fi
+}
+trap cleanup EXIT
+
+[[ "$(uname -s)" == Darwin ]] || fail 'This installer is for macOS. Install PostgreSQL 17 with your OS package manager and set ORDERFLOW_PG_BIN to its bin directory.'
+if [[ -x "$pg_bin/postgres" ]]; then
+  "$pg_bin/postgres" --version
+  printf 'Project-local PostgreSQL is already installed. Run ./scripts/db start.\n'
+  exit 0
+fi
+[[ ! -e "$install_dir/Postgres.app" ]] || fail 'An incomplete installation already exists. Inspect .tools/postgres/Postgres.app before retrying; it has not been replaced.'
+
+umask 077
+mkdir -p "$download_dir" "$mount_dir" "$install_dir"
+if [[ ! -f "$archive" ]]; then
+  printf 'Downloading pinned Postgres.app 2.9.6 with PostgreSQL 17 (about 120 MB).\n'
+  curl --fail --location --retry 2 --connect-timeout 15 --max-time 300 \
+    --output "$archive.partial" "$archive_url"
+  mv "$archive.partial" "$archive"
+fi
+actual_sha="$(shasum -a 256 "$archive")"
+actual_sha="${actual_sha%% *}"
+[[ "$actual_sha" == "$expected_sha" ]] || fail 'Installer checksum mismatch. The archive was not mounted or executed. Inspect/remove only the failed archive and retry.'
+printf 'Publisher SHA-256 verified.\n'
+hdiutil attach "$archive" -readonly -nobrowse -mountpoint "$mount_dir" -quiet
+mounted=true
+[[ -d "$mount_dir/Postgres.app" ]] || fail 'The expected application was not present in the verified installer.'
+ditto "$mount_dir/Postgres.app" "$install_dir/Postgres.app"
+"$pg_bin/postgres" --version
+printf 'Installed below .tools/postgres. Run ./scripts/db start.\n'
