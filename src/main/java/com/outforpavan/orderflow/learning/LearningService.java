@@ -6,6 +6,6 @@ import org.springframework.stereotype.Service;
 public class LearningService {
 
     public String message() {
-        return "Learning Spring Boot one step at a time";
+        return "LearningService - Learning Spring Boot one step at a time";
     }
 }
