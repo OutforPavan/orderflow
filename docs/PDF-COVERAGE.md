@@ -12,6 +12,10 @@ The [Lesson 002 injection lab](labs/B03-001-constructor-injection.md) implements
 first part of EXT01 and a prerequisite for P3-Q81/P4-S20. Their full ambiguity
 exercises and learner reviews remain pending.
 
+The [three-day sprint](THREE-DAY-SPRINT.md) changes teaching pace and prioritization,
+not the evidence criteria or required question set. The learner's missing-service
+prediction has been reviewed; it does not complete the bean-ambiguity PDF questions.
+
 ## Source inventory
 
 | Source | Original IDs | Pages | Count |

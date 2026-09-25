@@ -4,6 +4,15 @@ Build an order and inventory application with Java 21, beginning with Spring Boo
 4.1.1. Learn one concept at a time by explaining it, implementing a small change
 together, and observing the result. Later lessons may change as questions arise.
 
+## Current pace: a three-day sprint
+
+On 2026-09-25 the learner requested three hours per day for the next three days.
+Use the [180-minute session plans](THREE-DAY-SPRINT.md) to group related concepts
+into larger feature blocks while retaining live practice and short reviews.
+The sprint targets a narrow working flow across the main technologies. Full
+practical coverage of the requirements below remains a larger completion target;
+unfinished experiments stay visible instead of becoming completed at the deadline.
+
 ## Completion requirements
 
 The [coverage tracker](PDF-COVERAGE.md) maps all 95 questions in the three

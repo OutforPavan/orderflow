@@ -8,9 +8,11 @@
 - Lesson 001: learner confirmed receiving the endpoint JSON on 2026-09-25;
   message-change exercise and reviewed explanation remain pending.
 - Lesson 002: constructor-injection implementation prepared and trainer-verified.
-- Understanding demonstrated: explanations have not been assessed yet.
-- Current next step: learner traces the controller/service constructor wiring and
-  performs the guided missing-service exercise before advancing further.
+- Understanding demonstrated: missing-service startup prediction reviewed as
+  correct; refine the lookup owner to Spring's container. Other explanations remain open.
+- Current pace: [three-day sprint](THREE-DAY-SPRINT.md), three hours per day.
+- Current next step: observe and restore the missing-service experiment, then
+  start the Day 1 REST/product feature block. Live failure/recovery is not yet recorded.
 
 ## Baseline verification — 2026-09-24
 
@@ -69,6 +71,26 @@ The baseline endpoint is `GET /api/learning/status` and returns:
   mark earlier unanswered checkpoints complete.
 
 ## Open questions and next steps
+
+### Learner review and accelerated pace - 2026-09-25
+
+- Learner correctly predicted that removing `@Service` prevents startup because
+  the controller requires `LearningService`. The container resolves dependencies;
+  the controller itself does not search for a bean. See the exact answer and review
+  in [INTERVIEW-NOTES.md](INTERVIEW-NOTES.md).
+- The local service initially had its annotation removed and its message changed.
+  A later inspection showed `@Service` restored, with the message edit retained.
+  These learner edits were preserved. They do not prove an observed startup failure
+  or successful recovery; the learner's diagnostic and runtime results remain pending.
+- Adopted a working three-session plan with 180 minutes each, including breaks.
+  The breadth-first option is a stated working assumption pending learner preference.
+  Nine-hour sprint completion and all-95-question curriculum completion are distinct.
+- Rancher Desktop's Docker client was found, but its selected daemon was unreachable.
+  Database/broker runtime readiness still needs verification during preparation.
+- This increment changes documentation only. No new application feature or passing
+  build is claimed for the learner's currently modified working tree.
+- PDF questions Covered: 0/95; broader requirements complete: 0/14.
+- Session minutes used: not measured yet. No elapsed study time is inferred from chat.
 
 Record the learner's actual explanations and doubts here after the exercise.
 Implement and explain small steps together; publish tested, finished increments

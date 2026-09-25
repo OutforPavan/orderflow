@@ -34,7 +34,7 @@ Learner's answer, reviewed corrections, and supporting observations: pending.
 
 ## Lesson 002 - constructor injection
 
-Status: implementation demonstrated by the trainer; learner explanation pending.
+Status: implementation demonstrated by the trainer; one learner prediction reviewed.
 Related scope: EXT01 and the first B03 exercise. P3-Q81/P4-S20 concern ambiguity
 and are not yet completed by this single-candidate example.
 
@@ -44,5 +44,23 @@ and are not yet completed by this single-candidate example.
 - Why can `@WebMvcTest` with an explicit service import differ from full startup?
 - What does `final` guarantee, and what does it not guarantee?
 
-Learner's own answers, review, and follow-up evidence: pending. Reference answers
-are in [Lesson 002](lessons/002-constructor-injection.md).
+### Reviewed prediction - 2026-09-25
+
+Prompt: If `@Service` is removed while the controller still requires the service,
+would the application start successfully?
+
+Learner's answer:
+
+> if we remove @`Service` then application won't start because controller is having a bean dependency in constructor and that bean `LearningService` could not be found by controller.
+
+Review: the predicted result and required-dependency reasoning are correct for
+our current scan-based application. Precision correction: **Spring's container**
+cannot resolve the service while creating the controller; the controller does not
+perform a bean lookup. With no alternative registration, creation fails during
+startup. Merely having the class in the source tree does not register a bean.
+
+Local annotation removal and its later restoration were observed, but the learner's
+startup diagnostic and successful runtime recovery have not been reported. Other questions above remain
+pending. Follow-up to revisit: would explicit registration through `@Bean` or
+`@Import` change the outcome? Reference answers remain in
+[Lesson 002](lessons/002-constructor-injection.md).

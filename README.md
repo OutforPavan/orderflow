@@ -7,8 +7,11 @@ We start from fundamentals, explain and implement together, and add one concept 
 
 Lesson 002 implementation: the controller receives a `LearningService` through
 constructor injection. The endpoint returns the same JSON.
-The learner has run the baseline endpoint; remaining Lesson 001 explanations and
-Lesson 002 practice are pending.
+The learner has run the baseline endpoint and correctly predicted missing-service
+startup failure. Live failure/recovery evidence and other explanations remain pending.
+
+Current pace: [three days, three hours per day](docs/THREE-DAY-SPRINT.md), organized
+around a narrow end-to-end implementation. Full PDF coverage remains tracked separately.
 
 - Java 21; Spring Boot 4.1.1; Maven Wrapper.
 - `GET /api/learning/status` returns a fixed learning message.

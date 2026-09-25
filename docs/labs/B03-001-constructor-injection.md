@@ -79,10 +79,14 @@ and circular dependencies remain later exercises.
 ## Learner checkpoint
 
 - [x] Learner reported receiving the original endpoint's JSON before this refactor.
+- [x] Learner predicted missing-service startup failure; reviewed on 2026-09-25 with the container/lookup wording correction.
 - [ ] Learner restarts the updated application and traces controller-to-service calls.
 - [ ] Learner predicts and observes missing-service failure in full application startup.
 - [ ] Learner restores the annotation and verifies recovery.
 - [ ] Learner explains constructor selection, dependency resolution, and test boundaries.
 
-Review outcome: pending. Use the [guided lesson](../lessons/002-constructor-injection.md)
+Review outcome: one prediction is correct; full practical review remains pending.
+Local annotation removal, later restoration, and a message edit were observed, but
+no learner diagnostic or runtime recovery result has been supplied.
+Use the [guided lesson](../lessons/002-constructor-injection.md)
 and record the learner's own explanation in [INTERVIEW-NOTES.md](../INTERVIEW-NOTES.md).

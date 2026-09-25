@@ -76,7 +76,8 @@ can supply practical evidence without inventing an unnecessary business feature.
 ## Evidence record for a completed exercise
 
 Add one focused record under `docs/labs/` when an exercise is actually performed.
-These records do not exist yet. Use this template:
+The first record is [B03 constructor injection](labs/B03-001-constructor-injection.md).
+Use this template for subsequent exercises:
 
 ```markdown
 # <lab ID> / <small exercise name>

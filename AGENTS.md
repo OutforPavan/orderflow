@@ -6,6 +6,10 @@
   small concept; do not implement later roadmap phases without the learner.
 - Explain the problem and mechanism, make a small change together, run an
   experiment, then ask for a short explanation and review it.
+- From 2026-09-25, use the three-day, three-hours-per-day sprint in
+  docs/THREE-DAY-SPRINT.md. Group related concepts into focused feature blocks;
+  keep prediction, live practice, and short reviews. Distinguish this accelerated
+  milestone from full curriculum completion, and record actual time and gaps.
 - Distinguish working baseline code from demonstrated learner understanding.
   Never mark an exercise or explanation complete on the learner's behalf.
 - Use Java 21 and `./dev verify`. Keep dependencies aligned with Spring Boot.

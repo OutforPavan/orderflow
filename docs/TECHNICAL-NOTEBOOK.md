@@ -32,6 +32,11 @@ the learner confirmed receiving the endpoint's JSON. The remaining exercises and
 reviewed explanations are pending. New experiments described here are proposed
 unless an evidence record says otherwise.
 
+Update on 2026-09-25: the learner's missing-service startup prediction was reviewed
+as correct, with the clarification that Spring's container resolves the dependency.
+Live failure/recovery evidence remains pending. The [three-day sprint](THREE-DAY-SPRINT.md)
+groups teaching into feature blocks while this notebook retains sequential detail.
+
 ## Reading order
 
 | Order | Chapter | Current state |
@@ -521,7 +526,7 @@ failure to the layer you would inspect and the evidence you would collect.
 
 ## 4. Constructor injection: connecting two managed objects
 
-**Implemented on 2026-09-25; learner practice and explanation pending.**
+**Implemented on 2026-09-25; missing-service prediction reviewed, live practice and remaining explanations pending.**
 Use [Lesson 002](lessons/002-constructor-injection.md) for the guided code walk-through
 and six follow-up answers. The [lab record](labs/B03-001-constructor-injection.md)
 contains the exact observations and their limits.
@@ -615,6 +620,7 @@ substitute for a learner explanation.
 | F005 | Why can IntelliJ use Java 25 even when the POM targets Java 21? | Chapter 1: build target versus selected runtime | Setup distinction noted; IDE Java 21 selection not verified |
 | F006 | Why does the controller's single constructor work without `@Autowired`? | Chapter 4 and Lesson 002 | Implementation prepared; learner explanation pending |
 | F007 | Why can a service import make a focused test pass even if normal scanning would miss the service? | Chapter 4: test boundaries | Trainer checks passed; learner experiment pending |
+| F008 | Would removing `@Service` stop this application's startup? | Chapter 4 and INTERVIEW-NOTES.md | Learner correctly predicted failure; container resolves the dependency, not the controller; live recovery pending |
 
 For each new question, add its context, attempted answer if any, correction,
 relevant source, proposed experiment, and evidence after execution. Keep open

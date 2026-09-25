@@ -1,6 +1,6 @@
 # Lesson 002 — Constructor injection
 
-**Checkpoint:** implementation is prepared for practice; learner execution and explanation remain pending. Lesson 001's outstanding checkpoint remains open. This is the first small step in lab B03, not completion of the whole lab or any PDF question.
+**Checkpoint:** implementation is prepared for practice; the learner correctly predicted missing-service startup failure on 2026-09-25. The review clarified that Spring's container resolves the dependency. Live failure/recovery and the remaining explanations are pending. Lesson 001's outstanding checkpoint remains open. This is the first small step in lab B03, not completion of the whole lab or any PDF question.
 
 ## The problem and the change
 
