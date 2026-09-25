@@ -3,6 +3,11 @@
 **One goal:** run a Java application that answers an HTTP request, and identify
 the code we wrote versus the infrastructure Spring Boot supplies.
 
+This lesson describes the first baseline (`lesson-001-start`). Since Lesson 002,
+the controller receives a `LearningService` and delegates message creation to it.
+Use [Lesson 002](002-constructor-injection.md) for the current wiring. The original
+message-change exercise below is still available using the service's message method.
+
 ## The problem
 
 A client asks our program for information over HTTP. Java supplies the language
@@ -72,7 +77,7 @@ These are three different parts of the response.
 
 Before editing, predict what will change if the message text changes.
 
-1. Change the returned message to `My first Spring Boot application`.
+1. Change the returned message in `LearningService.message()` to `My first Spring Boot application` (the initial baseline stored it directly in the controller).
 2. Restart the application and call the endpoint again. We have not added hot reload.
 3. Run `./dev test`. Explain why the HTTP contract test now fails.
 4. Update that test's message expectation to match the deliberate contract change.

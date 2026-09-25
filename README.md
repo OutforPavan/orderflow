@@ -5,12 +5,14 @@ We start from fundamentals, explain and implement together, and add one concept 
 
 ## Current checkpoint
 
-Lesson 001 baseline: one Spring Boot application and one JSON endpoint.
-The learner exercise and explanation are still pending.
+Lesson 002 implementation: the controller receives a `LearningService` through
+constructor injection. The endpoint returns the same JSON.
+The learner has run the baseline endpoint; remaining Lesson 001 explanations and
+Lesson 002 practice are pending.
 
 - Java 21; Spring Boot 4.1.1; Maven Wrapper.
 - `GET /api/learning/status` returns a fixed learning message.
-- Tests cover application startup and the HTTP response contract.
+- Three tests cover application startup, the HTTP response contract, and missing required dependencies.
 - Future features are described in the [roadmap](docs/ROADMAP.md).
 
 ## Run on this machine
@@ -56,7 +58,7 @@ runner JRE. On this machine the JDK is at
 
 ## Learn in small steps
 
-1. Read [Lesson 001](docs/lessons/001-first-spring-boot-application.md).
+1. Continue with [Lesson 002: constructor injection](docs/lessons/002-constructor-injection.md); revisit [Lesson 001](docs/lessons/001-first-spring-boot-application.md) for the initial request path.
 2. Run the baseline, predict the exercise outcome, and make the small change.
 3. Review the result together and explain it in your own words.
 4. Run the tests, update the [progress log](docs/PROGRESS.md), and commit/push.
@@ -71,6 +73,7 @@ covers every question in the three supplied PDFs plus the broader curriculum;
 each item needs live practice, implementation or diagnostic evidence, and a
 reviewed explanation.
 
+- [Lesson 002 implementation and verification record](docs/labs/B03-001-constructor-injection.md)
 - [Technical notebook: internals and follow-up answers](docs/TECHNICAL-NOTEBOOK.md)
 - [All 95 PDF questions and completion tracker](docs/PDF-COVERAGE.md)
 - [Practical lab catalog](docs/LAB-CATALOG.md)

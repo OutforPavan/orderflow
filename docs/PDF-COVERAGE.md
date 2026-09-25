@@ -7,7 +7,10 @@ the evidence needed to close each item.
 
 **Current state: 95 mapped; 0 covered.** Some introductory reference notes and
 baseline checks exist, but no PDF item has yet passed the full learner checkpoint.
-Every item below is planned. Mapping a question is not completing it.
+Every PDF item below is planned. Mapping a question is not completing it.
+The [Lesson 002 injection lab](labs/B03-001-constructor-injection.md) implements a
+first part of EXT01 and a prerequisite for P3-Q81/P4-S20. Their full ambiguity
+exercises and learner reviews remain pending.
 
 ## Source inventory
 
@@ -69,7 +72,7 @@ list alone is not a completeness test for the original curriculum.
 
 | ID | Required area | Lab families | State |
 | --- | --- | --- | --- |
-| EXT01 | Java 21 and Spring fundamentals, IoC, DI, lifecycle, configuration | J04, B01-B04 | Planned |
+| EXT01 | Java 21 and Spring fundamentals, IoC, DI, lifecycle, configuration | J04, B01-B04 | In progress: first constructor-injection step |
 | EXT02 | REST design, DTOs, validation, errors, pagination | A01, B05 | Planned |
 | EXT03 | SQL, PostgreSQL, schema migrations, constraints and indexes | D00, D02 | Planned |
 | EXT04 | JPA lifecycle, persistence context, relationships, fetching, dirty checking | D00, D02 | Planned |

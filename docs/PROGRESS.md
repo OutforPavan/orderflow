@@ -5,9 +5,12 @@
 - Environment and minimal application baseline: prepared.
 - Baseline: Java 21, Spring Boot 4.1.1, Maven, one HTTP endpoint.
 - Repository: [OutforPavan/orderflow](https://github.com/OutforPavan/orderflow).
-- Lesson 001: awaiting the learner's exercise and explanation.
-- Understanding demonstrated: not assessed yet.
-- Next concept after lesson 001: constructor injection in lesson 002.
+- Lesson 001: learner confirmed receiving the endpoint JSON on 2026-09-25;
+  message-change exercise and reviewed explanation remain pending.
+- Lesson 002: constructor-injection implementation prepared and trainer-verified.
+- Understanding demonstrated: explanations have not been assessed yet.
+- Current next step: learner traces the controller/service constructor wiring and
+  performs the guided missing-service exercise before advancing further.
 
 ## Baseline verification — 2026-09-24
 
@@ -26,7 +29,7 @@ The baseline endpoint is `GET /api/learning/status` and returns:
 
 ## Evidence to collect for lesson 001
 
-- [ ] Learner starts the application and calls the endpoint.
+- [x] Learner starts the application and calls the endpoint (self-reported JSON response, 2026-09-25).
 - [ ] Learner changes the message and observes the new response.
 - [ ] Learner traces bootstrap, request mapping, method execution, and JSON response.
 - [ ] Learner explains Spring Boot's contribution and identifies remaining questions.
@@ -45,6 +48,25 @@ The baseline endpoint is `GET /api/learning/status` and returns:
   These are planning counts, not a judgment about the learner's prior experience.
 - Next teaching step remains the Lesson 001 exercise and explanation; the new
   documentation does not advance the lesson checkpoint automatically.
+
+## Lesson 002 implementation - 2026-09-25
+
+- Added `LearningService`; `LearningController` requires it through its sole
+  constructor. The service supplies the existing message, and the HTTP contract
+  remains unchanged.
+- `./dev verify` on Java 21: 3 tests passed, 0 failures/errors/skips.
+- The missing-dependency test registered only the controller and verified context
+  startup fails with `UnsatisfiedDependencyException` caused by
+  `NoSuchBeanDefinitionException`. That expected failure is a passing test.
+- A separate packaged-application localhost request returned HTTP 200,
+  `application/json`, and the expected two fields. The verification server was stopped.
+- [Lesson instructions](lessons/002-constructor-injection.md) and
+  [lab evidence](labs/B03-001-constructor-injection.md) are ready for learner practice.
+- EXT01 is in progress. PDF items covered remain 0/95; same-type bean ambiguity
+  questions P3-Q81 and P4-S20 are still planned for a later B03 exercise.
+- Learner execution of Lesson 002, constructor explanation, and failure comparison
+  remain pending. The user's request to begin the next implementation did not
+  mark earlier unanswered checkpoints complete.
 
 ## Open questions and next steps
 

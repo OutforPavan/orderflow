@@ -6,9 +6,15 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class LearningController {
 
+    private final LearningService learningService;
+
+    public LearningController(LearningService learningService) {
+        this.learningService = learningService;
+    }
+
     @GetMapping("/api/learning/status")
     public LearningStatus status() {
-        return new LearningStatus("orderflow", "Learning Spring Boot one step at a time");
+        return new LearningStatus("orderflow", learningService.message());
     }
 
     public record LearningStatus(String application, String message) {

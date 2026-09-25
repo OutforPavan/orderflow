@@ -6,6 +6,8 @@ observe it in code, then explain its failures and tradeoffs.
 
 **Baseline:** Java 21, Spring Boot 4.1.1, Spring Framework 7.0.9; application code
 at commit `3513f6a`. First notes prepared on 2026-09-24.
+**Current implementation:** Lesson 002 constructor injection (2026-09-25).
+Historical baseline observations are labeled; current wiring is described below.
 
 ## How to use this notebook
 
@@ -25,9 +27,10 @@ Three statuses must stay distinct:
 - **Demonstrated:** the learner performed the exercise, explained the mechanism,
   and supplied reviewed evidence. This is never inferred from a generated document.
 
-The baseline startup and HTTP checks were performed during setup. The learner's
-hands-on exercise and explanation are still pending. New experiments described
-here are explicitly proposed unless an evidence record says otherwise.
+The baseline startup and HTTP checks were performed during setup. On 2026-09-25
+the learner confirmed receiving the endpoint's JSON. The remaining exercises and
+reviewed explanations are pending. New experiments described here are proposed
+unless an evidence record says otherwise.
 
 ## Reading order
 
@@ -36,7 +39,8 @@ here are explicitly proposed unless an evidence record says otherwise.
 | 1 | [Application startup and auto-configuration](#startup) | Fundamental explanation discussed; deeper notes prepared |
 | 2 | [IoC, controller creation, and bean lifecycle](#beans) | Controller-creation explanation discussed; deeper notes prepared |
 | 3 | [HTTP dispatch and JSON serialization](#http-flow) | Basic request path discussed; deeper notes prepared |
-| 4 | [Conversation follow-ups](#follow-up-log) | Open questions and answer references |
+| 4 | [Constructor injection](#constructor-injection) | Implementation trainer-verified; learner practice pending |
+| Log | [Conversation follow-ups](#follow-up-log) | Open questions and answer references |
 | Later | [Next chapters](#next-chapters) | Planned in curriculum order |
 
 Use the [roadmap](ROADMAP.md) for lesson order, the [PDF coverage tracker](PDF-COVERAGE.md)
@@ -50,6 +54,7 @@ The [interview notebook](INTERVIEW-NOTES.md) stores the learner's own reviewed a
 | [pom.xml](../pom.xml) | Java target, dependency management, web starter, and packaging plugin |
 | [OrderflowApplication](../src/main/java/com/outforpavan/orderflow/OrderflowApplication.java) | Java entry point and application configuration |
 | [LearningController](../src/main/java/com/outforpavan/orderflow/learning/LearningController.java) | GET endpoint and response record |
+| [LearningService](../src/main/java/com/outforpavan/orderflow/learning/LearningService.java) | Constructor-injected message supplier |
 | [LearningControllerTest](../src/test/java/com/outforpavan/orderflow/learning/LearningControllerTest.java) | MVC response-contract checks |
 
 <a id="startup"></a>
@@ -167,7 +172,7 @@ Check resolved dependencies, active properties/profiles, explicit exclusions, ex
 
 ### 2.1 The object, its definition, and its owner
 
-In Orderflow, `main()` does not construct `LearningController`. Spring creates and manages that object. This is **Inversion of Control (IoC)**: object assembly and lifecycle decisions are delegated to a container. **Dependency injection (DI)** is a way to supply an object's collaborators; we will implement constructor injection in the next lesson.
+In Orderflow, `main()` does not construct `LearningController`. Spring creates and manages that object. This is **Inversion of Control (IoC)**: object assembly and lifecycle decisions are delegated to a container. **Dependency injection (DI)** is a way to supply an object's collaborators; the Lesson 002 implementation in Chapter 4 makes this concrete.
 
 `BeanFactory` supplies the fundamental bean-management contract. `ApplicationContext` builds on it with facilities such as application events and resource access. Spring Boot initializes an appropriate application context for our application. A **bean** is an object managed by that container. [Spring IoC introduction](https://docs.spring.io/spring-framework/reference/core/beans/introduction.html)
 
@@ -202,15 +207,16 @@ The normal path for our controller is:
 
 ```text
 discover class → register definition → process metadata
-    → select constructor → create object → populate dependencies
+    → select constructor → resolve constructor arguments → create object
+    → populate any configured fields/setters
     → initialize and post-process → expose managed bean
 ```
 
 Two extension points explain much of Spring's apparent “magic.” A `BeanFactoryPostProcessor` can change **configuration metadata** before ordinary application beans are instantiated. A `BeanPostProcessor` participates in processing **instances**, including callbacks around initialization. Specialized post-processors also participate in earlier creation phases. Infrastructure may return a proxy when a configured feature requires interception; being a bean does not mean every object is proxied. [Container extension points](https://docs.spring.io/spring-framework/reference/core/beans/factory-extension.html)
 
-Our controller declares no constructor, so Java provides a default no-argument constructor. Spring invokes it to create the target object. This default comes from Java, not from `@RestController`. [Java 21 default constructors](https://docs.oracle.com/javase/specs/jls/se21/html/jls-8.html#jls-8.8.9)
+At the first baseline our controller declared no constructor, so Java supplied a default no-argument constructor. This default came from Java, not from `@RestController`. Since Lesson 002 the controller declares a constructor requiring `LearningService`; Java no longer supplies that former default constructor. [Java 21 default constructors](https://docs.oracle.com/javase/specs/jls/se21/html/jls-8.html#jls-8.8.9)
 
-Spring does **not** require every bean to have a no-argument constructor. For an ordinary component with one declared constructor, Spring uses that constructor even without `@Autowired`, resolving its dependencies. Multiple constructors need the applicable selection rules; simply adding more constructors is not a dependency-resolution strategy. We will study missing and ambiguous dependencies in Lesson 002. [Constructor injection rules](https://docs.spring.io/spring-framework/reference/core/beans/annotation-config/autowired.html)
+Spring does **not** require every bean to have a no-argument constructor. For an ordinary component with one declared constructor, Spring uses that constructor even without `@Autowired`, resolving its dependencies. Multiple constructors need the applicable selection rules; simply adding more constructors is not a dependency-resolution strategy. Lesson 002 introduces a missing dependency; multiple-candidate ambiguity remains a later B03 exercise. [Constructor injection rules](https://docs.spring.io/spring-framework/reference/core/beans/annotation-config/autowired.html)
 
 After dependency population, supported initialization callbacks can run. If distinct callbacks are configured, the usual initialization sequence is `@PostConstruct`, `InitializingBean.afterPropertiesSet()`, then a custom init method. Standard AOP wrapping normally follows target initialization. During orderly context shutdown, configured destruction callbacks can release resources. Our controller currently defines none of these callbacks. This outline describes the normal path, not every specialized factory or circular-reference case. [Bean lifecycle](https://docs.spring.io/spring-framework/reference/core/beans/factory-nature.html)
 
@@ -230,11 +236,11 @@ In the current application:
 | --- | --- |
 | Remove `@RestController`, add nothing | Default scanning no longer registers this class |
 | Replace it with `@Component` | A bean exists, but it is not recognized as an annotated MVC controller |
-| Construct it using `new LearningController()` in ordinary code | A separate Java object exists; Spring does not automatically manage it |
+| Construct it using `new LearningController(new LearningService())` in ordinary code | Separate Java objects exist; Spring does not automatically manage them |
 
 The second row matters because Framework 7.0.9's `RequestMappingHandlerMapping` expects a controller stereotype; leaving `@GetMapping` alone is insufficient. [Handler detection API](https://docs.spring.io/spring-framework/docs/7.0.9/javadoc-api/org/springframework/web/servlet/mvc/method/annotation/RequestMappingHandlerMapping.html#isHandler(java.lang.Class))
 
-**Pending guided experiment:** add a temporary explicit constructor and set a breakpoint there. Restart once, then call the endpoint twice with a breakpoint in `status()`. Predict one constructor hit and two method hits in that process. Then temporarily remove the annotation, restart, and observe the missing handler. Restore the baseline afterward. These are predictions; no experiment is recorded as completed.
+**Pending guided experiment:** set a breakpoint in the controller's explicit constructor. Restart once, then call the endpoint twice with a breakpoint in `status()`. Predict one controller-constructor hit and two method hits in that process. Then temporarily remove the controller annotation, restart, and observe the missing handler. Restore it afterward. The learner has called the baseline endpoint; this debugger/failure experiment remains pending.
 
 ### 2.6 Follow-up questions, from fundamentals to interview depth
 
@@ -340,6 +346,7 @@ sequenceDiagram
     participant Mapping as RequestMappingHandlerMapping
     participant Adapter as RequestMappingHandlerAdapter
     participant Controller as LearningController bean
+    participant Service as LearningService bean
     participant Writer as Return-value handler and JSON converter
     Client->>Server: GET /api/learning/status
     Server->>Front: Servlet request and response
@@ -347,6 +354,8 @@ sequenceDiagram
     Mapping-->>Front: Handler method and interceptor chain
     Front->>Adapter: Invoke the selected handler
     Adapter->>Controller: status()
+    Controller->>Service: message()
+    Service-->>Controller: Message text
     Controller-->>Adapter: LearningStatus record
     Adapter->>Writer: Handle response-body return value
     Writer->>Server: Write JSON to the servlet response
@@ -365,7 +374,7 @@ asynchronous, and short-circuit branches; it is not a complete framework call st
 4. **`HandlerAdapter`:** knows how to invoke that handler type. For annotation-based
    methods, `RequestMappingHandlerAdapter` uses argument resolvers and return-value
    handlers. Our `status()` has no arguments, so there is no input binding to do.
-5. **Controller:** performs our application operation and returns Java data.
+5. **Controller:** calls `LearningService.message()` and creates the response record.
 6. **Response-body processing:** converts that return value into the HTTP body;
    the servlet response is eventually sent to the client.
 
@@ -508,9 +517,91 @@ a missing controller annotation.
 mapping, adapter, controller, and message converter. Then connect a concrete
 failure to the layer you would inspect and the evidence you would collect.
 
+<a id="constructor-injection"></a>
+
+## 4. Constructor injection: connecting two managed objects
+
+**Implemented on 2026-09-25; learner practice and explanation pending.**
+Use [Lesson 002](lessons/002-constructor-injection.md) for the guided code walk-through
+and six follow-up answers. The [lab record](labs/B03-001-constructor-injection.md)
+contains the exact observations and their limits.
+
+### 4.1 The required dependency is explicit
+
+`LearningController` now has a final `LearningService` field and one constructor
+accepting that service. `status()` obtains the message through the supplied
+reference. Spring manages both components; it does not need a call to
+`new LearningService()` in the controller. The endpoint's HTTP contract is unchanged.
+
+```java
+private final LearningService learningService;
+
+public LearningController(LearningService learningService) {
+    this.learningService = learningService;
+}
+```
+
+The constructor is ordinary Java. Its parameter expresses the dependency; the
+container resolves and supplies it. The field assignment retains the reference
+for future requests. Construction and request handling are separate events.
+
+### 4.2 Internal decision points
+
+1. Scanning registers component definitions for the controller and service.
+2. When creating the controller, Spring selects its single declared constructor.
+3. The container resolves the `LearningService` parameter to a registered candidate.
+4. It obtains that service instance, creating and initializing it if needed.
+5. It invokes the controller constructor with the resolved reference and completes
+   the remaining controller lifecycle work.
+
+For source navigation in Framework 7.0.9, the constructor-candidate hook is
+`AutowiredAnnotationBeanPostProcessor.determineCandidateConstructors`.
+The name of that processor does not imply that every injected constructor must
+carry `@Autowired`; its single-constructor rule applies here.
+See the [constructor-processing API](https://docs.spring.io/spring-framework/docs/7.0.9/javadoc-api/org/springframework/beans/factory/annotation/AutowiredAnnotationBeanPostProcessor.html).
+
+`DefaultListableBeanFactory.resolveDependency` is a useful dependency-resolution
+entry point. Constructor selection answers which constructor to invoke; dependency
+resolution answers what values to pass. An existing Java class is insufficient:
+our required parameter needs a candidate registered with the relevant context.
+See the [bean-factory API](https://docs.spring.io/spring-framework/docs/7.0.9/javadoc-api/org/springframework/beans/factory/support/DefaultListableBeanFactory.html).
+
+### 4.3 Observe the correct boundary
+
+The current positive evidence is a successful full context-load test and the
+unchanged MVC response contract. An isolated negative test explicitly registers
+only the controller. Its context refresh fails with `UnsatisfiedDependencyException`
+caused by `NoSuchBeanDefinitionException` for `LearningService`.
+This is verified evidence about a missing required bean; it is not a claim that
+we physically removed the service annotation in the running application.
+
+The MVC slice includes `@Import(LearningService.class)` because ordinary services
+are outside its default scan scope. That explicit registration can succeed even
+if `@Service` is removed. To investigate discovery, use full startup as directed
+in the lesson, not only the focused MVC test. The separate full context-load test
+uses the application's normal scanning.
+See [WebMvcTest](https://docs.spring.io/spring-boot/api/java/org/springframework/boot/webmvc/test/autoconfigure/WebMvcTest.html).
+
+### 4.4 Design reasoning to practice
+
+The controller owns HTTP mapping and response construction; the service supplies
+application behavior. This tiny service is a teaching step before business rules,
+not a universal rule to wrap every constant in a separate class. A direct concrete
+collaborator is sufficient for this step; alternative implementations are a later
+requirement to explore.
+
+The final field cannot be reassigned after construction. That does not make a
+collaborator immutable or thread-safe, and Java callers can still pass null to an
+unguarded constructor. The current service is stateless. Keep per-request data
+out of shared mutable fields as the application grows.
+
+**Understanding check:** trace who chooses the constructor, who resolves its
+argument, and when `message()` is invoked. Then explain the different outcomes
+of a missing service and a controller that was never registered.
+
 <a id="follow-up-log"></a>
 
-## 4. Conversation follow-up log
+## 5. Conversation follow-up log
 
 This records what was asked and what remains open. A reference answer is not a
 substitute for a learner explanation.
@@ -522,6 +613,8 @@ substitute for a learner explanation.
 | F003 | Does a controller singleton mean a new instance for each request? | Chapter 2: scope and concurrency | Reference prepared; not yet assessed |
 | F004 | Who turns `LearningStatus` into JSON? | Chapter 3: return-value handling and converter | Reference prepared; not yet assessed |
 | F005 | Why can IntelliJ use Java 25 even when the POM targets Java 21? | Chapter 1: build target versus selected runtime | Setup distinction noted; IDE Java 21 selection not verified |
+| F006 | Why does the controller's single constructor work without `@Autowired`? | Chapter 4 and Lesson 002 | Implementation prepared; learner explanation pending |
+| F007 | Why can a service import make a focused test pass even if normal scanning would miss the service? | Chapter 4: test boundaries | Trainer checks passed; learner experiment pending |
 
 For each new question, add its context, attempted answer if any, correction,
 relevant source, proposed experiment, and evidence after execution. Keep open
@@ -529,14 +622,14 @@ questions visible until the learner can reason through a changed example.
 
 <a id="next-chapters"></a>
 
-## 5. Next chapters, added as we learn
+## 6. Next chapters, added as we learn
 
 These are chapter commitments, not completed explanations or implemented features.
 Lab families are deliberately split into small exercises when their turn arrives.
 
 | Sequence | Future chapter | Internals and practical questions to investigate |
 | --- | --- | --- |
-| 4 | Constructor injection and configuration classes | Candidate resolution, missing/ambiguous beans, qualifiers, primary choices, configuration-method interception |
+| 4 continued | Additional dependency-selection cases and configuration classes | First constructor-injection step implemented; ambiguity, qualifiers, primary choices, and configuration-method interception remain planned |
 | 5 | Configuration and profiles | Config data loading, property origins, precedence, typed binding, validation, environment differences |
 | 6 | REST contracts and testing | DTO boundaries, validation, exception resolution, pagination, unit/MVC/integration test boundaries |
 | 7 | SQL and JPA | PostgreSQL, migrations, entity identity, persistence context, state transitions, dirty checking, relationship ownership |
@@ -559,7 +652,7 @@ The [coverage tracker](PDF-COVERAGE.md) ties the provided PDFs to these chapters
 and also lists requirements beyond the PDFs. It is the completion checklist;
 this notebook is the explanation and revision reference.
 
-## 6. How we maintain the notes
+## 7. How we maintain the notes
 
 During each active lesson, prepare or review the relevant notes in parallel with
 independent implementation work when useful. Integrate the result into this

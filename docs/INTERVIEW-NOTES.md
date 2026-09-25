@@ -30,3 +30,19 @@ Status: awaiting the learner's explanation.
 - What would you inspect first if the endpoint returned 404?
 
 Learner's answer, reviewed corrections, and supporting observations: pending.
+
+
+## Lesson 002 - constructor injection
+
+Status: implementation demonstrated by the trainer; learner explanation pending.
+Related scope: EXT01 and the first B03 exercise. P3-Q81/P4-S20 concern ambiguity
+and are not yet completed by this single-candidate example.
+
+- Which object depends on which, and who supplies the constructor argument?
+- Why is `@Autowired` unnecessary on this particular constructor?
+- What changes if the required service is not registered?
+- Why can `@WebMvcTest` with an explicit service import differ from full startup?
+- What does `final` guarantee, and what does it not guarantee?
+
+Learner's own answers, review, and follow-up evidence: pending. Reference answers
+are in [Lesson 002](lessons/002-constructor-injection.md).
