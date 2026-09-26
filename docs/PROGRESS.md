@@ -14,8 +14,10 @@
 - Current implementation: Day 1 product/order APIs, external configuration,
   PostgreSQL migrations, JPA, and transaction rollback. Trainer verification passed:
   43 tests plus real HTTP requests and application-restart persistence.
-- Current next step: run the prepared Day 1 requests and transaction drill with
-  the learner, then review the mechanism and failure outcomes. Earlier unobserved
+- Current learner evidence: product creation returned 201, Location `/api/products/1`,
+  name `Keyboard`, price 1250.00, and stock 10 (response shared on 2026-09-26).
+- Current next step: retrieve that product, verify persistence after an application
+  restart, and place an order; then review the mechanism and failure outcomes. Earlier unobserved
   failure/recovery steps remain open; faster pacing does not close them automatically.
 
 ## Baseline verification — 2026-09-24
@@ -75,6 +77,19 @@ The baseline endpoint is `GET /api/learning/status` and returns:
   mark earlier unanswered checkpoints complete.
 
 ## Open questions and next steps
+
+### First learner product request - reported 2026-09-26
+
+- Learner supplied the response to the guided create-product request: HTTP 201,
+  `Location: /api/products/1`, and JSON with ID 1, name Keyboard, price 1250.00,
+  stock 10. The supplied HTTP Date header was `Fri, 25 Sep 2026 16:36:01 GMT`.
+- This records a learner-reported successful create request, not an independent
+  database inspection or evidence of completed restart/validation/transaction drills.
+- Explained the created status, resource location, and returned fields. The learner's
+  own explanation and the transaction prediction remain pending.
+- Continue with product 1. Order totals depend on its price at order creation;
+  do not assume the optional price-update request has been performed.
+- Full PDF coverage remains 0/95; no broader requirement is marked complete.
 
 ### Day 1 implementation and verification - 2026-09-25
 

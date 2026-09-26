@@ -67,7 +67,8 @@ pending. Follow-up to revisit: would explicit registration through `@Bean` or
 
 ## Day 1 - request to durable order
 
-Status: implementation prepared; learner practice and answers pending.
+Status: implementation verified; learner shared a successful product-create response.
+Remaining practical drills and the learner's explanations are pending.
 Use [the lesson](lessons/003-day-one-order-flow.md) and
 [observed verification](labs/DAY1-order-flow.md) as references.
 
@@ -85,3 +86,11 @@ Use [the lesson](lessons/003-day-one-order-flow.md) and
 
 The transaction prediction was requested during implementation; response and
 review are pending. No Day 1 understanding or full PDF scenario is marked complete.
+
+### First product response - reported 2026-09-26
+
+Learner supplied HTTP 201, `Location: /api/products/1`, and the JSON product
+`{id: 1, name: Keyboard, price: 1250.00, stock: 10}`. The response body is recorded
+verbatim in the lab evidence. This is an execution result, not an interview answer.
+Next explanation to review: why should the same product remain after restarting
+only the Java application? The learner's answer is pending.

@@ -1,7 +1,8 @@
 # Day 1 - HTTP request to durable order
 
 Date: 2026-09-25.
-State: implemented and trainer-verified; learner practice and reviewed explanations pending.
+State: implemented and trainer-verified; learner shared a successful product-create
+response on 2026-09-26. Remaining practice and reviewed explanations are pending.
 Baseline: `a5c72db` (including the learner's restored service annotation and message edit).
 Implementation checkpoint: [day-1-order-flow](https://github.com/OutforPavan/orderflow/tree/day-1-order-flow).
 
@@ -94,6 +95,22 @@ is separate and is migrated when the learner starts the development application.
 
 ## Learner checkpoint
 
+Learner-supplied evidence, reported 2026-09-26:
+
+```http
+HTTP/1.1 201
+Location: /api/products/1
+Content-Type: application/json
+Date: Fri, 25 Sep 2026 16:36:01 GMT
+
+{"id":1,"name":"Keyboard","price":1250.00,"stock":10}
+```
+
+This establishes the reported successful request. Retrieval, persistence across a
+restart, invalid input, order creation, and rollback have not yet been reported
+by the learner. Trainer results above remain separate evidence.
+
+- [x] Learner shared a successful product-create response with ID and Location.
 - [ ] Override the message and explain the winning source.
 - [ ] Execute valid/invalid HTTP requests and identify where validation runs.
 - [ ] Restart the application and retrieve the saved product/order.

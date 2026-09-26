@@ -612,6 +612,11 @@ of a missing service and a controller that was never registered.
 
 ## 5. Day 1: from validated input to a database transaction
 
+Learner checkpoint update, 2026-09-26: a successful product-create response was
+shared, with status 201, Location `/api/products/1`, and product 1 (Keyboard,
+price 1250.00, stock 10). Restart, validation, order, and rollback practice remain
+pending; see the lab record for the learner-supplied response and its timestamp.
+
 Use the [guided lesson](lessons/003-day-one-order-flow.md) and
 [verification record](labs/DAY1-order-flow.md) together. Implementation and trainer
 checks do not close the learner's run/explain checkpoints.

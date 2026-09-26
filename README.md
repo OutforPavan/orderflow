@@ -6,8 +6,9 @@ We start from fundamentals, explain and implement together, and add one concept 
 ## Current checkpoint
 
 Day 1 implementation: product REST APIs, validated DTOs, PostgreSQL/Flyway/JPA,
-and transactional order creation. All 43 tests and the packaged HTTP/restart check pass; learner
-execution and explanation of the new features remain pending.
+and transactional order creation. All 43 tests and the packaged HTTP/restart check pass.
+The learner has created product 1 and shared its 201 response; the remaining
+hands-on drills and explanations are pending.
 
 The learner has run the original endpoint and correctly predicted missing-service
 startup failure. See the [Day 1 lesson](docs/lessons/003-day-one-order-flow.md).
