@@ -37,10 +37,16 @@ as correct, with the clarification that Spring's container resolves the dependen
 Live failure/recovery evidence remains pending. The [three-day sprint](THREE-DAY-SPRINT.md)
 groups teaching into feature blocks while this notebook retains sequential detail.
 
+Update on 2026-09-26: the learner requested a walkthrough of every existing class
+and configuration before proceeding. Start with [CODE-WALKTHROUGH.md](CODE-WALKTHROUGH.md)
+for the complete file map, object ownership, request traces, settings, and test
+purposes. Pause new features; revisit these deeper chapters as questions arise.
+
 ## Reading order
 
 | Order | Chapter | Current state |
 | --- | --- | --- |
+| Now | [Current classes and configuration](CODE-WALKTHROUGH.md) | Guide prepared; requested learner walkthrough and explanations pending |
 | 1 | [Application startup and auto-configuration](#startup) | Fundamental explanation discussed; deeper notes prepared |
 | 2 | [IoC, controller creation, and bean lifecycle](#beans) | Controller-creation explanation discussed; deeper notes prepared |
 | 3 | [HTTP dispatch and JSON serialization](#http-flow) | Basic request path discussed; deeper notes prepared |
@@ -54,6 +60,10 @@ for all 95 source questions, and the [lab catalog](LAB-CATALOG.md) for practical
 The [interview notebook](INTERVIEW-NOTES.md) stores the learner's own reviewed answers.
 
 ## The code this notebook explains
+
+The table below covers the original bootstrap/DI slice. The
+[complete current inventory](CODE-WALKTHROUGH.md) also covers products, orders,
+errors, configuration, migrations, helper scripts, and all test classes.
 
 | File | Role |
 | --- | --- |
@@ -614,8 +624,11 @@ of a missing service and a controller that was never registered.
 
 Learner checkpoint update, 2026-09-26: a successful product-create response was
 shared, with status 201, Location `/api/products/1`, and product 1 (Keyboard,
-price 1250.00, stock 10). Restart, validation, order, and rollback practice remain
-pending; see the lab record for the learner-supplied response and its timestamp.
+price 1250.00, stock 10). The learner subsequently reported product persistence
+after restart and an order POST, supplying a product response with stock 8.
+The actual order JSON, remaining failure drills, and mechanism explanations have
+not been reviewed. The learner requested a class/configuration walkthrough before
+further implementation; see [the guide](CODE-WALKTHROUGH.md) and the lab record.
 
 Use the [guided lesson](lessons/003-day-one-order-flow.md) and
 [verification record](labs/DAY1-order-flow.md) together. Implementation and trainer
@@ -659,7 +672,9 @@ Spring Data supplies the repository implementation. Hibernate manages entities
 within a persistence context and translates state changes into SQL. PostgreSQL
 stores durable rows. Flyway applies the versioned SQL migration, and Hibernate
 uses `ddl-auto=validate` to check mappings rather than mutate the schema.
-`open-in-view=false` keeps persistence work inside the service boundaries.
+`open-in-view=false` disables a request-spanning EntityManager; this project
+performs persistence and response mapping inside service transactions. The
+setting itself does not enforce the location of repository calls.
 [Database initialization](https://docs.spring.io/spring-boot/how-to/data-initialization.html)
 
 `ProductService.changePrice` loads a managed entity and changes its price inside
@@ -724,6 +739,8 @@ substitute for a learner explanation.
 | F006 | Why does the controller's single constructor work without `@Autowired`? | Chapter 4 and Lesson 002 | Implementation prepared; learner explanation pending |
 | F007 | Why can a service import make a focused test pass even if normal scanning would miss the service? | Chapter 4: test boundaries | Trainer checks passed; learner experiment pending |
 | F008 | Would removing `@Service` stop this application's startup? | Chapter 4 and INTERVIEW-NOTES.md | Learner correctly predicted failure; container resolves the dependency, not the controller; live recovery pending |
+| F009 | What is every class and configuration for? Too much code was implemented before explaining it. | [Complete code walkthrough](CODE-WALKTHROUGH.md): object ownership, class roles, request traces, settings, and tests | New features paused at learner request; guide prepared, learner explanations pending |
+| F010 | Product survived restart; stock changed from 10 to 8 after an order POST. Is stock the order quantity? | Walkthrough sections 1 and 5; Day 1 lab evidence | Restart self-reported and product JSON supplied; distinguish remaining stock from units in an order; actual order JSON not reviewed |
 
 For each new question, add its context, attempted answer if any, correction,
 relevant source, proposed experiment, and evidence after execution. Keep open

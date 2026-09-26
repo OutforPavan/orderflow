@@ -6,9 +6,15 @@ We start from fundamentals, explain and implement together, and add one concept 
 ## Current checkpoint
 
 Day 1 implementation: product REST APIs, validated DTOs, PostgreSQL/Flyway/JPA,
-and transactional order creation. All 43 tests and the packaged HTTP/restart check pass.
-The learner has created product 1 and shared its 201 response; the remaining
-hands-on drills and explanations are pending.
+and transactional order creation. Trainer verification on 2026-09-25 passed all
+43 tests and the packaged HTTP/restart check. The learner created product 1,
+reports that it survived application restart, and shared its subsequent stock-8
+response after an order request. The actual order JSON and remaining drills have
+not yet been reviewed.
+
+**Current focus:** pause new features and explain the existing classes and
+configuration using the [code walkthrough](docs/CODE-WALKTHROUGH.md). Working code
+does not establish learner understanding.
 
 The learner has run the original endpoint and correctly predicted missing-service
 startup failure. See the [Day 1 lesson](docs/lessons/003-day-one-order-flow.md).
@@ -88,7 +94,7 @@ runner JRE. On this machine the JDK is at
 
 ## Learn in small steps
 
-1. Continue with [Day 1: request to durable order](docs/lessons/003-day-one-order-flow.md); revisit [constructor injection](docs/lessons/002-constructor-injection.md) for object wiring.
+1. Walk through the [current classes and configuration](docs/CODE-WALKTHROUGH.md) together before continuing [Day 1 practice](docs/lessons/003-day-one-order-flow.md); revisit [constructor injection](docs/lessons/002-constructor-injection.md) for object wiring.
 2. Run the baseline, predict the exercise outcome, and make the small change.
 3. Review the result together and explain it in your own words.
 4. Run the tests, update the [progress log](docs/PROGRESS.md), and commit/push.
@@ -105,6 +111,7 @@ reviewed explanation.
 
 - [Lesson 002 implementation and verification record](docs/labs/B03-001-constructor-injection.md)
 - [Day 1 implementation and verification record](docs/labs/DAY1-order-flow.md)
+- [Every current class and configuration: guided walkthrough](docs/CODE-WALKTHROUGH.md)
 - [Technical notebook: internals and follow-up answers](docs/TECHNICAL-NOTEBOOK.md)
 - [All 95 PDF questions and completion tracker](docs/PDF-COVERAGE.md)
 - [Practical lab catalog](docs/LAB-CATALOG.md)

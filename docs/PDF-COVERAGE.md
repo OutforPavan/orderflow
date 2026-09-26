@@ -16,6 +16,12 @@ The [three-day sprint](THREE-DAY-SPRINT.md) changes teaching pace and prioritiza
 not the evidence criteria or required question set. The learner's missing-service
 prediction has been reviewed; it does not complete the bean-ambiguity PDF questions.
 
+Update, 2026-09-26: the learner reports product persistence across restart and
+shared a stock-8 product response after an order request. Class/configuration
+explanations are now the priority in [CODE-WALKTHROUGH.md](CODE-WALKTHROUGH.md).
+This guide and these introductory observations do not complete a PDF scenario;
+coverage states remain unchanged.
+
 ## Source inventory
 
 | Source | Original IDs | Pages | Count |

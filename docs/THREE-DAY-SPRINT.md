@@ -8,6 +8,13 @@ Working preference: build one narrow end-to-end flow across the main topics.
 On 2026-09-25 the learner asked to start implementation and finish Day 1 today,
 so Day 1 is active. Completion still requires the learner practice and review below.
 
+**Update, 2026-09-26:** the learner requested an explanation of every existing
+class and configuration before proceeding. Pause new feature implementation and
+work through [CODE-WALKTHROUGH.md](CODE-WALKTHROUGH.md) in small groups. Review
+understanding and answer questions before resuming the feature blocks. This
+request takes priority over the earlier pace; calendar time does not advance a
+learning checkpoint.
+
 ## What finishing this sprint means
 
 Target: a Java 21 Orderflow slice that accepts a validated request, stores an order

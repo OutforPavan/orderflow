@@ -13,6 +13,11 @@ The sprint targets a narrow working flow across the main technologies. Full
 practical coverage of the requirements below remains a larger completion target;
 unfinished experiments stay visible instead of becoming completed at the deadline.
 
+On 2026-09-26 the learner asked to understand every existing class and
+configuration before proceeding. The current step is the
+[code walkthrough](CODE-WALKTHROUGH.md); pause new features and review the current
+implementation together before resuming the sprint.
+
 ## Completion requirements
 
 The [coverage tracker](PDF-COVERAGE.md) maps all 95 questions in the three

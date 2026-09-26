@@ -16,9 +16,12 @@
   43 tests plus real HTTP requests and application-restart persistence.
 - Current learner evidence: product creation returned 201, Location `/api/products/1`,
   name `Keyboard`, price 1250.00, and stock 10 (response shared on 2026-09-26).
-- Current next step: retrieve that product, verify persistence after an application
-  restart, and place an order; then review the mechanism and failure outcomes. Earlier unobserved
-  failure/recovery steps remain open; faster pacing does not close them automatically.
+  The learner subsequently reported restart persistence and an order POST, sharing
+  a product response with stock 8. The actual order JSON has not been supplied.
+- Current next step: **pause new features** and explain all existing classes and
+  configuration in small groups using [CODE-WALKTHROUGH.md](CODE-WALKTHROUGH.md).
+  This explicit learner request takes priority over the accelerated pace. Earlier
+  unobserved failure/recovery steps and reviewed explanations remain open.
 
 ## Baseline verification — 2026-09-24
 
@@ -77,6 +80,28 @@ The baseline endpoint is `GET /api/learning/status` and returns:
   mark earlier unanswered checkpoints complete.
 
 ## Open questions and next steps
+
+### Restart report and request to understand the code - 2026-09-26
+
+- Learner reports product 1 survived application restart and that stock went from
+  10 to 8 after an order POST. Supplied product JSON: ID 1, Keyboard, price 1250.00,
+  stock 8; HTTP 200 dated `Sat, 26 Sep 2026 02:50:33 GMT`.
+- The phrase "order response with quantity 10" needs a terminology correction:
+  product `stock` is current availability; order `quantity` is units bought in one
+  order. The guided request asked for 2. Stock 8 is consistent with that request
+  given the prior stock 10 and no other changes, but actual order ID, quantity,
+  total, and POST response have not been reviewed.
+- Learner explicitly asked to understand every existing class and configuration
+  before proceeding. The trainer implemented too broad a slice before explaining
+  it. Pause feature work and use the new file-by-file guide, request traces, and
+  follow-up questions alongside the sequential technical notebook.
+- Guide preparation and code audit do not mark the class walkthrough or learner
+  explanations complete. Next discussion: object ownership and the product flow,
+  then orders/transactions, configuration/errors, and test evidence.
+- This increment changes documentation only. No application tests, API requests,
+  or database mutations were run for this walkthrough. Historical 43-test and
+  smoke-test results remain dated to the implementation verification.
+- PDF coverage remains 0/95; broader requirements complete remain 0/14.
 
 ### First learner product request - reported 2026-09-26
 

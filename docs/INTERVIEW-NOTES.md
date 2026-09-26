@@ -67,8 +67,10 @@ pending. Follow-up to revisit: would explicit registration through `@Bean` or
 
 ## Day 1 - request to durable order
 
-Status: implementation verified; learner shared a successful product-create response.
-Remaining practical drills and the learner's explanations are pending.
+Status: implementation verified; learner shared product creation, reports restart
+persistence, and supplied a later product response with stock 8 after an order POST.
+New features are paused for the requested class/configuration walkthrough. Remaining
+practical drills and the learner's explanations are pending.
 Use [the lesson](lessons/003-day-one-order-flow.md) and
 [observed verification](labs/DAY1-order-flow.md) as references.
 
@@ -94,3 +96,22 @@ Learner supplied HTTP 201, `Location: /api/products/1`, and the JSON product
 verbatim in the lab evidence. This is an execution result, not an interview answer.
 Next explanation to review: why should the same product remain after restarting
 only the Java application? The learner's answer is pending.
+
+### Code and configuration walkthrough requested - 2026-09-26
+
+Learner reports the product survived restart and stock decreased from 10 to 8
+after an order POST. The supplied HTTP 200 JSON is a product response, not an
+order response. Review the distinction between available `stock` and an order's
+`quantity`; do not infer a reviewed order ID, quantity, or total from this evidence.
+
+Learner asked to understand every existing class and configuration because the
+implementation had moved ahead of the explanations. Use
+[CODE-WALKTHROUGH.md](CODE-WALKTHROUGH.md) for the prepared file-by-file answers.
+First prompts to review, one at a time:
+
+- Why do `CreateProductRequest`, `Product`, and `ProductResponse` exist separately?
+- Which objects does Spring create, and which does our code or JSON/JPA infrastructure create?
+- Trace the existing product POST through its classes and identify where the transaction completes.
+
+Learner answers and review: pending. The trainer's reference guide is not a
+substitute for the learner's explanation or new coverage evidence.

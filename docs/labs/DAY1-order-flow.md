@@ -1,8 +1,10 @@
 # Day 1 - HTTP request to durable order
 
 Date: 2026-09-25.
-State: implemented and trainer-verified; learner shared a successful product-create
-response on 2026-09-26. Remaining practice and reviewed explanations are pending.
+State: implemented and trainer-verified; learner shared product creation, reports
+restart persistence, and supplied a stock-8 product response after an order POST
+on 2026-09-26. Class/configuration explanation is now the priority; remaining
+practice and reviewed explanations are pending.
 Baseline: `a5c72db` (including the learner's restored service annotation and message edit).
 Implementation checkpoint: [day-1-order-flow](https://github.com/OutforPavan/orderflow/tree/day-1-order-flow).
 
@@ -106,14 +108,33 @@ Date: Fri, 25 Sep 2026 16:36:01 GMT
 {"id":1,"name":"Keyboard","price":1250.00,"stock":10}
 ```
 
-This establishes the reported successful request. Retrieval, persistence across a
-restart, invalid input, order creation, and rollback have not yet been reported
-by the learner. Trainer results above remain separate evidence.
+This establishes the reported successful create request. The learner subsequently
+reported that this product survived application restart and that an order POST
+reduced stock from 10 to 8, supplying:
+
+```http
+HTTP/1.1 200
+Content-Type: application/json
+Date: Sat, 26 Sep 2026 02:50:33 GMT
+
+{"id":1,"name":"Keyboard","price":1250.00,"stock":8}
+```
+
+This is product JSON: `stock` means units remaining, not the quantity of a particular
+order. The earlier guided order request used quantity 2. The actual order response
+has not been supplied, so its ID, quantity, total, and POST status are not recorded
+as reviewed learner evidence. Invalid-input, price-update, and forced-rollback
+drills remain pending. Trainer results above remain separate evidence.
+
+At the learner's request, pause new features and follow
+[the class/configuration guide](../CODE-WALKTHROUGH.md) before further drills.
 
 - [x] Learner shared a successful product-create response with ID and Location.
 - [ ] Override the message and explain the winning source.
 - [ ] Execute valid/invalid HTTP requests and identify where validation runs.
-- [ ] Restart the application and retrieve the saved product/order.
+- [x] Learner reports product persistence across application restart and shares a subsequent product response.
+- [x] Learner reports an order POST followed by a stock decrease; shared product response shows stock 8.
+- [ ] Review actual order response fields and retrieve the saved order after restart.
 - [ ] Change price and inspect the dirty-checking UPDATE.
 - [ ] Run and explain successful order creation and the forced rollback test.
 - [ ] Explain controller/service/repository responsibilities, persistence context,

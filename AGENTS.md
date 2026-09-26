@@ -10,6 +10,10 @@
   docs/THREE-DAY-SPRINT.md. Group related concepts into focused feature blocks;
   keep prediction, live practice, and short reviews. Distinguish this accelerated
   milestone from full curriculum completion, and record actual time and gaps.
+- From 2026-09-26, pause new features at the learner's request until the current
+  classes and configuration have been explained together. Use
+  docs/CODE-WALKTHROUGH.md in small groups, answer doubts, and review understanding
+  before resuming implementation. This takes priority over the accelerated pace.
 - Distinguish working baseline code from demonstrated learner understanding.
   Never mark an exercise or explanation complete on the learner's behalf.
 - Use Java 21 and `./dev verify`. Keep dependencies aligned with Spring Boot.
