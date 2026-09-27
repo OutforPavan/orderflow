@@ -69,8 +69,9 @@ pending. Follow-up to revisit: would explicit registration through `@Bean` or
 
 Status: implementation verified; learner shared product creation, reports restart
 persistence, and supplied a later product response with stock 8 after an order POST.
-New features are paused for the requested class/configuration walkthrough. Remaining
-practical drills and the learner's explanations are pending.
+New features are paused for the requested class/configuration walkthrough. A first
+DTO-design answer was reviewed on 2026-09-27; remaining practical drills and
+explanations are pending.
 Use [the lesson](lessons/003-day-one-order-flow.md) and
 [observed verification](labs/DAY1-order-flow.md) as references.
 
@@ -113,5 +114,31 @@ First prompts to review, one at a time:
 - Which objects does Spring create, and which does our code or JSON/JPA infrastructure create?
 - Trace the existing product POST through its classes and identify where the transaction completes.
 
-Learner answers and review: pending. The trainer's reference guide is not a
-substitute for the learner's explanation or new coverage evidence.
+First DTO-design answer reviewed below on 2026-09-27. Other answers remain pending.
+The trainer's reference guide is not a substitute for learner evidence.
+
+### Request DTO reasoning reviewed - 2026-09-27
+
+Prompt: Why would accepting `Product` directly as POST input be less controlled
+than accepting `CreateProductRequest`?
+
+Learner's answer:
+
+> I think because accepting `CreateProductRequest` gives us more control in request attribute properties ,size and their data types ,null , non null.
+
+Review: correctly identifies control over accepted fields, their types, and
+request validation rules. Refinement: an entity can also carry validation
+annotations. A separate request type defines this operation's input independently
+of the persistence model. Our create request accepts name, price, and stock; it
+has no product ID component. The service constructs a new entity from those
+explicit values, and the database generates its ID. This is not a claim that all
+unknown JSON properties necessarily produce an error.
+
+The trainer explained the next distinction: `@RequestBody` asks for JSON conversion;
+`@Valid` requests validation of the converted object before the controller body
+runs. Field constraints do not execute merely because the record is constructed.
+
+Next checkpoint: for valid JSON containing `"price": -10`, what do `@RequestBody`
+and `@Valid` each do, and will `ProductService.create()` run?
+Learner prediction and review: pending. No new runtime experiment was performed;
+this answer does not complete the walkthrough, Day 1, or a PDF scenario.

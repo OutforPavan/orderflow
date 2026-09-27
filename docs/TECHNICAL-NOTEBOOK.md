@@ -660,6 +660,19 @@ produce a deliberate 400 response here. `ApiExceptionHandler` maps expected
 application failures to problem responses; it does not make invalid business
 operations successful. [MVC validation](https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-controller/ann-validation.html)
 
+Learner review, 2026-09-27: the learner correctly identified request field/type
+and validation control as DTO benefits. Validation annotations could also be put
+on an entity; separation lets the API define its own accepted input independently
+of persistence fields. `CreateProductRequest` has no generated ID component, and
+`ProductService` explicitly maps name, price, and stock into a new `Product`.
+This alone does not promise rejection of every unknown JSON property.
+
+For a syntactically valid request containing a numeric negative price, conversion
+to `BigDecimal` can succeed; `@Valid` then detects the positive-price constraint
+violation and our handler returns 400 before the controller body/service runs.
+This is a prepared reference answer for the next checkpoint; the learner's
+prediction and experiment remain pending. [Request-body conversion and validation](https://docs.spring.io/spring-framework/reference/web/webmvc/mvc-controller/ann-methods/requestbody.html)
+
 Database constraints remain useful even when HTTP input is valid: another caller
 or a future code path can bypass that HTTP boundary. `ProblemDetail` separates
 HTTP error information from Java exception internals; field errors omit rejected
@@ -741,6 +754,7 @@ substitute for a learner explanation.
 | F008 | Would removing `@Service` stop this application's startup? | Chapter 4 and INTERVIEW-NOTES.md | Learner correctly predicted failure; container resolves the dependency, not the controller; live recovery pending |
 | F009 | What is every class and configuration for? Too much code was implemented before explaining it. | [Complete code walkthrough](CODE-WALKTHROUGH.md): object ownership, class roles, request traces, settings, and tests | New features paused at learner request; guide prepared, learner explanations pending |
 | F010 | Product survived restart; stock changed from 10 to 8 after an order POST. Is stock the order quantity? | Walkthrough sections 1 and 5; Day 1 lab evidence | Restart self-reported and product JSON supplied; distinguish remaining stock from units in an order; actual order JSON not reviewed |
+| F011 | Why use `CreateProductRequest` instead of accepting `Product` as POST input? | Chapter 5.2 and INTERVIEW-NOTES.md | Learner correctly identified field/type/validation control; API independence explained; conversion-versus-validation prediction pending |
 
 For each new question, add its context, attempted answer if any, correction,
 relevant source, proposed experiment, and evidence after execution. Keep open

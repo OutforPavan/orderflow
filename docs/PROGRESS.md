@@ -9,7 +9,9 @@
   message-change exercise and reviewed explanation remain pending.
 - Lesson 002: constructor-injection implementation prepared and trainer-verified.
 - Understanding demonstrated: missing-service startup prediction reviewed as
-  correct; refine the lookup owner to Spring's container. Other explanations remain open.
+  correct; refine the lookup owner to Spring's container. On 2026-09-27 the learner
+  correctly identified input/validation control as a request-DTO benefit; API
+  independence from the entity and validation execution were explained as refinements.
 - Current pace: [three-day sprint](THREE-DAY-SPRINT.md), three hours per day.
 - Current implementation: Day 1 product/order APIs, external configuration,
   PostgreSQL migrations, JPA, and transaction rollback. Trainer verification passed:
@@ -80,6 +82,21 @@ The baseline endpoint is `GET /api/learning/status` and returns:
   mark earlier unanswered checkpoints complete.
 
 ## Open questions and next steps
+
+### Request DTO answer reviewed - 2026-09-27
+
+- Learner identified control over request fields, types, size, and nullability as
+  benefits of `CreateProductRequest`. Exact answer and review are in
+  [INTERVIEW-NOTES.md](INTERVIEW-NOTES.md).
+- Clarified that entities can also have validation annotations; the separate DTO
+  defines operation-specific input independently of persistence fields. Our
+  request has no generated ID, and mapping to the new entity is explicit.
+- Explained JSON conversion versus validation. Next prediction: valid JSON with
+  negative price; does validation allow execution to reach the product service?
+  The learner's prediction and live validation experiment remain pending.
+- New features remain paused for the class/configuration walkthrough. This is a
+  documentation-only review; no tests, API requests, or database changes were run.
+  PDF coverage remains 0/95 and broader requirements complete remain 0/14.
 
 ### Restart report and request to understand the code - 2026-09-26
 
