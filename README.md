@@ -28,6 +28,14 @@ around a narrow end-to-end implementation. Full PDF coverage remains tracked sep
 - Focused MVC checks and database integration tests exercise validation and rollback.
 - Future features are described in the [roadmap](docs/ROADMAP.md).
 
+## Interview pricing slice — 2026-09-28
+
+The explicitly requested [discount and priority-fee implementation](docs/INTERVIEW-PRICING.md)
+adds Java 8-compatible calculation classes to the existing Java 21 app. The learner
+chose fees after discounts. Use [pricing requests](requests/pricing.http) and
+[verification notes](docs/labs/INTERVIEW-pricing.md). This scoped feature request
+does not complete the earlier class walkthrough or any learner checkpoint.
+
 ## Run on this machine
 
 ```sh

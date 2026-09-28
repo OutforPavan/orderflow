@@ -1,0 +1,33 @@
+### Start with --pricing.discount-all-products=true for this example.
+@baseUrl = http://localhost:8080
+@productId = 1
+
+### Create a product; replace productId above with the returned ID.
+POST {{baseUrl}}/api/products
+Content-Type: application/json
+
+{"name":"Interview keyboard","price":1000.00,"stock":10}
+
+### Discount only: 900.00
+POST {{baseUrl}}/api/orders
+Content-Type: application/json
+
+{"productId":{{productId}},"quantity":1}
+
+### Discount then 5% priority: 945.00
+POST {{baseUrl}}/api/orders
+Content-Type: application/json
+
+{"productId":{{productId}},"quantity":1,"serviceLevel":"PRIORITY_5"}
+
+### Discount then 10% priority: 990.00
+POST {{baseUrl}}/api/orders
+Content-Type: application/json
+
+{"productId":{{productId}},"quantity":1,"serviceLevel":"PRIORITY_10"}
+
+### Rejected: caller cannot provide a discount rate or final amount.
+POST {{baseUrl}}/api/orders
+Content-Type: application/json
+
+{"productId":{{productId}},"quantity":1,"discountPercent":100,"total":0}

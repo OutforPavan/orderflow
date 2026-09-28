@@ -142,3 +142,12 @@ Next checkpoint: for valid JSON containing `"price": -10`, what do `@RequestBody
 and `@Valid` each do, and will `ProductService.create()` run?
 Learner prediction and review: pending. No new runtime experiment was performed;
 this answer does not complete the walkthrough, Day 1, or a PDF scenario.
+
+
+## Interview preparation slice — 2026-09-28
+
+The learner explicitly requested implementation of product discounts and paid priority fees, plus broad architect-interview preparation. This narrowly resumes feature work for that request; earlier class walkthrough and learner checkpoints remain open. The learner chose priority fees after the discount.
+
+See [pricing walkthrough](INTERVIEW-PRICING.md) and [design decision](decisions/0003-order-pricing-snapshots.md). Java 8 compatibility applies to the five dependency-free pricing/demo classes; the application remains Java 21 / Boot 4. Paid service choice is not verified membership. Broader security/distributed-system topics are prepared reference material, not completed implementations or learner-demonstrated skills.
+
+Verification is recorded in [pricing evidence](labs/INTERVIEW-pricing.md). No PDF item or broader curriculum requirement is marked Covered by this preparation; learner practice and reviewed answers remain pending. Actual learner study time is not measured.

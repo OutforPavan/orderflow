@@ -26,7 +26,8 @@ public class ProductService {
 
     @Transactional
     public ProductResponse changePrice(long id, UpdateProductPriceRequest request) {
-        Product product = findProduct(id);
+        Product product = productRepository.findByIdForUpdate(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Product " + id + " was not found"));
         product.changePrice(request.price());
         // The managed entity is dirty-checked; transaction commit flushes the update.
         return ProductResponse.from(product);
