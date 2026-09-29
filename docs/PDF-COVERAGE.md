@@ -88,7 +88,7 @@ list alone is not a completeness test for the original curriculum.
 | EXT04 | JPA lifecycle, persistence context, relationships, fetching, dirty checking | D00, D02 | In progress: Day 1 persistence and managed update; relationships/fetching and learner review pending |
 | EXT05 | Transactions, proxies, rollback, propagation, isolation, flush/commit | D01, D03 | In progress: Day 1 atomicity/flush drill; wider transaction matrix and learner review pending |
 | EXT06 | Concurrent correctness, locks, duplicate requests and retries | D03, D04, J01 | Planned |
-| EXT07 | Spring Security, authentication, authorization, ownership, sessions/tokens, CSRF/CORS | X01 | Planned |
+| EXT07 | Spring Security, authentication, authorization, ownership, sessions/tokens, CSRF/CORS | X01 | Planned: [foundations/reference prepared](SPRING-SECURITY.md); implementation and learner practice pending |
 | EXT08 | Caching, TTL, invalidation, races, stampedes and outages | C01 | Planned |
 | EXT09 | Kafka fundamentals, partitioning, groups, offsets, ordering, lag and schema evolution | K01, K02 | Planned |
 | EXT10 | Reliable event publication, outbox, idempotent consumption and recovery | K02, K03 | Planned |

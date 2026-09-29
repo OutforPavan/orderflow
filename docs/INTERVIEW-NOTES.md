@@ -151,3 +151,28 @@ The learner explicitly requested implementation of product discounts and paid pr
 See [pricing walkthrough](INTERVIEW-PRICING.md) and [design decision](decisions/0003-order-pricing-snapshots.md). Java 8 compatibility applies to the five dependency-free pricing/demo classes; the application remains Java 21 / Boot 4. Paid service choice is not verified membership. Broader security/distributed-system topics are prepared reference material, not completed implementations or learner-demonstrated skills.
 
 Verification is recorded in [pricing evidence](labs/INTERVIEW-pricing.md). No PDF item or broader curriculum requirement is marked Covered by this preparation; learner practice and reviewed answers remain pending. Actual learner study time is not measured.
+
+
+## Spring Security interview question - 2026-09-29
+
+Learner's request:
+
+> Interviewer Asked me today to implement Spring security on Order inventory project. Explain first in depth what is spring security and how to implement it in any project ? Authentication and Authorization implementation in project
+
+Status: explanation and implementation reference prepared in
+[SPRING-SECURITY.md](SPRING-SECURITY.md). No security feature or lab has been run.
+The requested explanation is the current focus; earlier answers remain pending.
+
+Practice prompts, to review one at a time:
+
+- How does authentication differ from authorization in our product/order flow?
+- What happens before an HTTP request reaches the controller?
+- Which component loads an account, and which verifies the password?
+- Why does the CUSTOMER role not establish ownership of a particular order?
+- When would you use a session, Basic authentication, or an OAuth2 resource server?
+- Why can a POST return 403 before the role check? How do tests distinguish them?
+- Why does a filter failure not automatically use our MVC exception advice?
+
+First scenario: Alice and Bob are customers; Alice creates an order. Which facts
+must the application check before returning that order to Bob?
+Learner answer and review: pending. The guide's sample answers are trainer-prepared.

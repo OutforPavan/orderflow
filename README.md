@@ -12,9 +12,11 @@ reports that it survived application restart, and shared its subsequent stock-8
 response after an order request. The actual order JSON and remaining drills have
 not yet been reviewed.
 
-**Current focus:** pause new features and explain the existing classes and
-configuration using the [code walkthrough](docs/CODE-WALKTHROUGH.md). Working code
-does not establish learner understanding.
+**Current focus, 2026-09-29:** explain Spring Security authentication and
+authorization for the learner's interview question, using the
+[security guide](docs/SPRING-SECURITY.md). Its code is a prepared reference, not
+installed security. The existing [class walkthrough](docs/CODE-WALKTHROUGH.md) and
+learner checkpoints remain open; working code does not establish understanding.
 
 The learner has run the original endpoint and correctly predicted missing-service
 startup failure. See the [Day 1 lesson](docs/lessons/003-day-one-order-flow.md).

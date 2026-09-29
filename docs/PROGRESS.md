@@ -20,10 +20,11 @@
   name `Keyboard`, price 1250.00, and stock 10 (response shared on 2026-09-26).
   The learner subsequently reported restart persistence and an order POST, sharing
   a product response with stock 8. The actual order JSON has not been supplied.
-- Current next step: **pause new features** and explain all existing classes and
-  configuration in small groups using [CODE-WALKTHROUGH.md](CODE-WALKTHROUGH.md).
-  This explicit learner request takes priority over the accelerated pace. Earlier
-  unobserved failure/recovery steps and reviewed explanations remain open.
+- Current next step, 2026-09-29: explain Spring Security first in response to the
+  learner's interview question, then select the client/authentication mechanism
+  for a small implementation. [Security reference](SPRING-SECURITY.md) is prepared;
+  no security feature is installed. Earlier class/configuration walkthrough,
+  validation prediction, and unobserved failure/recovery checkpoints remain open.
 
 ## Baseline verification — 2026-09-24
 
@@ -82,6 +83,26 @@ The baseline endpoint is `GET /api/learning/status` and returns:
   mark earlier unanswered checkpoints complete.
 
 ## Open questions and next steps
+
+### Spring Security explanation requested - 2026-09-29
+
+- Learner reports an interviewer asked for Spring Security in the order/inventory
+  project and explicitly requests an in-depth explanation first, covering
+  authentication, authorization, and implementation.
+- Prepared [SPRING-SECURITY.md](SPRING-SECURITY.md): request/filter flow, credential
+  verification, bean roles, password handling, action/resource authorization,
+  Basic/session/JWT choices, CSRF/CORS, security errors, and acceptance cases.
+- Inspected the current `fe874e3` baseline: six endpoints, no security dependency
+  or account model, and no order owner. Pricing has added pessimistic stock/price
+  locking and strict DTO input; preserve those behaviors. The latest historical
+  build record is 74 passing tests on 2026-09-28, not new security verification.
+- Asked which client to secure first (IntelliJ/curl username/password, browser
+  session, or JWT resource server). No response recorded. Basic is used only as
+  the reference example; its product-only rules deny orders pending ownership.
+- This increment adds explanation/reference documentation only. No app source,
+  dependency, migration, credential, running server, or database was changed.
+  Reference code was reviewed, not compiled or run. Security remains unimplemented;
+  live practice and learner explanation are pending. Coverage stays 0/95 and 0/14.
 
 ### Request DTO answer reviewed - 2026-09-27
 

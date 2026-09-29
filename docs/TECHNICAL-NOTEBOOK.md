@@ -755,6 +755,7 @@ substitute for a learner explanation.
 | F009 | What is every class and configuration for? Too much code was implemented before explaining it. | [Complete code walkthrough](CODE-WALKTHROUGH.md): object ownership, class roles, request traces, settings, and tests | New features paused at learner request; guide prepared, learner explanations pending |
 | F010 | Product survived restart; stock changed from 10 to 8 after an order POST. Is stock the order quantity? | Walkthrough sections 1 and 5; Day 1 lab evidence | Restart self-reported and product JSON supplied; distinguish remaining stock from units in an order; actual order JSON not reviewed |
 | F011 | Why use `CreateProductRequest` instead of accepting `Product` as POST input? | Chapter 5.2 and INTERVIEW-NOTES.md | Learner correctly identified field/type/validation control; API independence explained; conversion-versus-validation prediction pending |
+| F012 | Interviewer asked for Spring Security in Orderflow; explain authentication/authorization and implementation first. | [Security guide](SPRING-SECURITY.md) and chapter 9 below | Reference prepared 2026-09-29; mechanism choice, implementation, practice, and learner answers pending |
 
 For each new question, add its context, attempted answer if any, correction,
 relevant source, proposed experiment, and evidence after execution. Keep open
@@ -775,7 +776,7 @@ Lab families are deliberately split into small exercises when their turn arrives
 | 7 | SQL and JPA | PostgreSQL, migrations, entity identity, persistence context, state transitions, dirty checking, relationship ownership |
 | 8 | Transactions | Proxy interception, transaction manager, rollback rules, propagation, flush/commit, isolation, self-invocation |
 | 9 | Data correctness and performance | N+1, fetching, query plans/indexes, optimistic/pessimistic locking, request idempotency, connection budgets |
-| 10 | Spring Security | Servlet filters, security context, authentication, authorization, ownership, password hashing, session/token tradeoffs, CSRF/CORS |
+| 10 | Spring Security | [Foundations reference prepared](SPRING-SECURITY.md); filters, authentication, authorization, ownership, password handling, sessions/tokens, CSRF/CORS; implementation/practice pending |
 | 11 | Java 21 runtime and concurrency | Records, exceptions, executors, futures, locks, ThreadLocal, virtual threads, JVM memory, GC, JFR and thread/heap evidence |
 | 12 | Operating the application | Logs, metrics, traces, Actuator, health/readiness, load tests, Docker, resource limits, deployment and rollback |
 | 13 | Caching | Cache-aside, keys, TTL, invalidation, stale reads, stampedes, multi-instance behavior, failure policy |
@@ -815,3 +816,36 @@ The learner explicitly requested implementation of product discounts and paid pr
 See [pricing walkthrough](INTERVIEW-PRICING.md) and [design decision](decisions/0003-order-pricing-snapshots.md). Java 8 compatibility applies to the five dependency-free pricing/demo classes; the application remains Java 21 / Boot 4. Paid service choice is not verified membership. Broader security/distributed-system topics are prepared reference material, not completed implementations or learner-demonstrated skills.
 
 Verification is recorded in [pricing evidence](labs/INTERVIEW-pricing.md). No PDF item or broader curriculum requirement is marked Covered by this preparation; learner practice and reviewed answers remain pending. Actual learner study time is not measured.
+
+
+## 9. Spring Security foundations - 2026-09-29
+
+The learner's interview question makes this the current explanation topic.
+[SPRING-SECURITY.md](SPRING-SECURITY.md) contains the sequential deep reference and
+configuration examples. The project remains Java 21 / Boot 4.1.1; Boot manages
+Security 7.1.1. Examples are prepared and reviewed, not installed or executed.
+
+Start from our concrete requirement: authenticate the caller, permit administrative
+product writes only to admins, and allow customers to read only their own orders.
+Security filters run before MVC; request authorization selects allowed actions,
+while service/data access must also enforce resource ownership. An authenticated
+CUSTOMER role alone does not authorize access to another customer's order.
+
+For local passwords, the authentication filter delegates to a manager/provider;
+UserDetailsService loads account data and PasswordEncoder verifies a submitted
+password against its stored encoding. Sessions and JWT resource-server designs
+change credential transport/persistence, not the need for business authorization.
+
+Current PurchaseOrder has no owner field. Implement ownership explicitly before
+opening customer order reads. Current pricing serviceLevel is a paid selection,
+not proof of membership or a security role. Preserve the existing pessimistic
+stock locking, price snapshots, transactions, and input validation.
+
+The first reference configuration uses Basic authentication for product endpoints,
+keeps CSRF, and denies order routes pending owner checks. Final mechanism selection
+is pending the learner's client preference. Security errors need filter-layer
+handlers; MVC exception advice alone is insufficient.
+
+Use the guide's acceptance matrix for later practice. It separates actual
+credential verification from mock-user access tests and supplies valid CSRF for
+role-denial tests. Earlier unanswered DTO/validation questions remain open.
