@@ -84,6 +84,19 @@ The baseline endpoint is `GET /api/learning/status` and returns:
 
 ## Open questions and next steps
 
+### OrderEntry performance interview preparation - 2026-10-06
+
+- Learner requested a senior-engineer answer to a Capgemini question about a slow
+  OrderEntry landing page. Prepared a diagnosis-first explanation and conditional
+  fixes in technical notebook chapter 10 and the interview notes.
+- Distinguish usable order form from a painted shell; correlate frontend and
+  backend evidence, optimize the critical path, preserve price/stock correctness,
+  then verify tail latency and errors under representative load.
+- This is hypothetical interview preparation. No page was inspected, application
+  code changed, performance test run, or improvement measured. The Spring Security
+  implementation/client selection and earlier learner checkpoints remain pending.
+- Documentation-only update; PDF coverage and broader completion counts unchanged.
+
 ### Spring Security explanation requested - 2026-09-29
 
 - Learner reports an interviewer asked for Spring Security in the order/inventory

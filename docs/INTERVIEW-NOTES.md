@@ -176,3 +176,31 @@ Practice prompts, to review one at a time:
 First scenario: Alice and Bob are customers; Alice creates an order. Which facts
 must the application check before returning that order to Bob?
 Learner answer and review: pending. The guide's sample answers are trainer-prepared.
+
+
+## Capgemini interview: slow OrderEntry landing page - 2026-10-06
+
+Learner asks how to improve a slow OrderEntry landing page, answered at senior
+engineer depth. No particular frontend, latency measurement, or root cause was
+supplied. Treat this as an interview scenario, not a diagnosed project incident.
+
+Trainer-prepared answer structure:
+
+1. Define the delay from the user's perspective, especially time until order entry
+   is usable; establish affected traffic and baseline measurements.
+2. Follow the browser waterfall and performance trace into backend traces to
+   identify the critical path: assets/rendering, sequential APIs, database work,
+   dependency latency, or resource saturation.
+3. Change the measured bottleneck: load essential data first, defer optional panels,
+   use bounded parallel requests, search/pagination and small payloads, improve
+   JavaScript delivery, and fix evidenced query/index/fetching problems.
+4. Cache suitable data with explicit freshness and user/tenant isolation. Recheck
+   authoritative price and stock on order submission and preserve transaction rules.
+5. Prove improvement at realistic scale using form-ready and API tail latency,
+   errors, database load, and correctness; roll out gradually and monitor.
+
+See [technical notebook chapter 10](TECHNICAL-NOTEBOOK.md#10-orderentry-landing-page-performance---2026-10-06)
+for conditional fixes, official references, and hypothetical examples. Do not
+present those examples as personal production results. No benchmark was run and
+no observed improvement percentage is claimed. Learner answer and review pending;
+this does not close a PDF question or broader curriculum requirement.

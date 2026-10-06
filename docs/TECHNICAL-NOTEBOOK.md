@@ -756,6 +756,7 @@ substitute for a learner explanation.
 | F010 | Product survived restart; stock changed from 10 to 8 after an order POST. Is stock the order quantity? | Walkthrough sections 1 and 5; Day 1 lab evidence | Restart self-reported and product JSON supplied; distinguish remaining stock from units in an order; actual order JSON not reviewed |
 | F011 | Why use `CreateProductRequest` instead of accepting `Product` as POST input? | Chapter 5.2 and INTERVIEW-NOTES.md | Learner correctly identified field/type/validation control; API independence explained; conversion-versus-validation prediction pending |
 | F012 | Interviewer asked for Spring Security in Orderflow; explain authentication/authorization and implementation first. | [Security guide](SPRING-SECURITY.md) and chapter 9 below | Reference prepared 2026-09-29; mechanism choice, implementation, practice, and learner answers pending |
+| F013 | How would a senior engineer improve a slow OrderEntry landing page? | Chapter 10: measurement, critical path, targeted fixes, cache correctness, and verification | Interview reference prepared 2026-10-06; no actual diagnosis, optimization, or learner practice claimed |
 
 For each new question, add its context, attempted answer if any, correction,
 relevant source, proposed experiment, and evidence after execution. Keep open
@@ -849,3 +850,85 @@ handlers; MVC exception advice alone is insufficient.
 Use the guide's acceptance matrix for later practice. It separates actual
 credential verification from mock-user access tests and supplies valid CSRF for
 role-denial tests. Earlier unanswered DTO/validation questions remain open.
+
+
+## 10. OrderEntry landing-page performance - 2026-10-06
+
+Interview scenario supplied by the learner, not a measured incident in Orderflow.
+No frontend inspection, benchmark, API call, or optimization was performed. This
+is trainer-prepared reasoning; learner practice and explanation remain pending.
+
+### Diagnose the critical path
+
+First define the outcome: when can the user select a customer, search products,
+and start entering an order? A painted shell or loading indicator does not prove
+that the form is usable. Compare affected users, devices/networks, first/repeat
+visits, and cold/warm caches. If a recent deployment caused an active regression,
+consider a targeted rollback or feature disable while investigating.
+
+Use the browser network waterfall and performance trace to separate connection
+setup, server response, downloads, API dependencies, and main-thread rendering.
+Correlate slow requests with backend traces. Record time until the form is usable,
+API p50/p95/p99, error rate, and load conditions. LCP describes when the largest
+visible content is painted; INP describes responsiveness to interactions, not full
+API completion or startup readiness. Real-user monitoring complements reproducible
+lab measurements. [LCP diagnosis](https://web.dev/articles/optimize-lcp),
+[INP meaning](https://web.dev/articles/inp).
+
+### Choose a change from the observed evidence
+
+| Observation | Targeted change and condition |
+| --- | --- |
+| Essential independent calls run sequentially | Run them concurrently with bounded fan-out; preserve real data dependencies. |
+| Whole screen waits for history/recommendations | Render essential order controls first and load optional panels independently. Missing authoritative order data must still prevent unsafe submission. |
+| Large product/customer lists | Server-side search and pagination; select only required fields; debounce search and cancel obsolete requests. Avoid downloading all records for a dropdown. |
+| Repeated pricing/stock calls per displayed product | Batch the data needed by the visible page, or use a measured page-specific response; avoid moving unbounded fan-out into the backend. |
+| Heavy JavaScript or rendering | Split code by route/feature, defer optional widgets, remove unused dependencies, and reduce expensive main-thread work. Optimize static assets and use compressed delivery/versioned caching as appropriate. |
+| Slow database spans | Inspect query count and plans; address N+1, excessive rows/columns, lock waits, or indexes aligned with filters/joins/sort order. |
+| Slow dependency or resource waits | Inspect downstream deadlines, connection/thread-pool waits, CPU and GC; bound optional work and measure capacity before increasing pools or replicas. |
+
+Code splitting postpones downloading/executing code that the initial screen does
+not require; it must not delay code needed to use the form.
+[JavaScript code splitting](https://web.dev/learn/performance/code-split-javascript).
+For JPA, use appropriate projections/fetching/batching after observing query
+behavior. Collection fetch joins with pagination require care; changing every
+relationship to eager loading is not a general N+1 solution. Query-plan validation
+can use PostgreSQL EXPLAIN, and controlled EXPLAIN (ANALYZE, BUFFERS) for actual
+execution evidence. ANALYZE executes the query: choose a safe, representative
+environment and account for profiling overhead.
+[PostgreSQL 17 EXPLAIN](https://www.postgresql.org/docs/17/using-explain.html).
+
+Spring Boot/Micrometer HTTP metrics such as http.server.requests help establish
+endpoint timing and errors; traces identify expensive database/downstream spans.
+Instrumenting and exposing observability for Orderflow would be future work; it
+is not claimed as installed by this explanation.
+[Boot metrics](https://docs.spring.io/spring-boot/reference/actuator/metrics.html).
+
+### Cache with the business rules intact
+
+Cache versioned static assets and suitable reference data with explicit TTL and
+invalidation rules. Include the necessary user/tenant/permission context for
+personalized results; do not share private customer data through a global key.
+Do not use stale display values as the authority for price or stock. At order
+submission, validate/recalculate against authoritative business data and enforce
+stock correctness transactionally. Current Orderflow already calculates pricing
+on the server and uses a pessimistic product lock; preserve those properties.
+Retries of non-idempotent order creation need an explicit idempotency design.
+
+### Verify a business improvement
+
+Hypothetical example: if order history is the three-second request preventing an
+otherwise-ready order form from being used, decouple that optional panel from
+form readiness, then separately investigate its query. This is not a claim of a
+three-second measured delay or an achieved improvement in this project.
+
+Compare before/after using the same dataset, network/device profile, concurrency,
+and cache conditions. Track form-ready latency and API tail latency alongside
+errors, database load, and order correctness. Roll out gradually with monitoring
+and a rollback path; keep performance budgets to detect regressions. A faster
+single local request or a higher Lighthouse score alone is insufficient evidence.
+
+Reference follow-ups: Why not simply add Redis? What if the API is fast but the
+screen is slow? Can independent calls always run in parallel? Which data may be
+stale safely? Why can increasing the connection pool worsen the bottleneck?
+Trainer answers are above; learner responses and experiments remain pending.
