@@ -84,6 +84,18 @@ The baseline endpoint is `GET /api/learning/status` and returns:
 
 ## Open questions and next steps
 
+### Looping caller and duplicate order protection - 2026-10-06
+
+- Prepared technical notebook chapter 13 and interview follow-ups distinguishing
+  API admission controls from durable order idempotency. Covered authenticated
+  caller quotas, concurrent duplicates, lost responses after commit, changing keys,
+  and domain uniqueness. No rate/throughput numbers are measured results.
+- Proposed shared enforcement and one database transaction for key/order/stock/result;
+  current product locking alone does not deduplicate requests. No new protection
+  is installed, no attack diagnosed, and no API/DB/load checks were run this turn.
+- Linked references for P1-Q02, P1-Q16, and P1-Q33; all remain Planned. Learner
+  practice/review, earlier checkpoints, and completion counts remain unchanged.
+
 ### CAP and Orderflow scaling interview preparation - 2026-10-06
 
 - Prepared technical notebook chapter 12: CAP during partitions, application

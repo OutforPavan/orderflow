@@ -180,6 +180,8 @@ to the shared catalog; each entry supplies the question-specific exercise.
 
 **Required evidence:** A concurrent integration test proves one order and one business effect; identical retries return the documented result, conflicting payload reuse is rejected, and a later legitimate order with a different key succeeds.
 
+**Prepared reference (2026-10-06):** [Looping caller and duplicate order protection](TECHNICAL-NOTEBOOK.md#13-protecting-an-api-from-a-looping-service-and-duplicate-orders---2026-10-06). Design explanation only; implementation, overload/concurrency drills, and learner review remain pending.
+
 **Execution record, implementation commit, and learner review:** pending.
 
 </details>
@@ -419,6 +421,8 @@ to the shared catalog; each entry supplies the question-specific exercise.
 **Live practice / implementation:** Drop an order or payment response after its business operation commits, then retry with the same stable idempotency key; separate retryable transient failures from validation errors and reconcile unknown payment outcomes.
 
 **Required evidence:** A fault test observes multiple attempts but one order/payment effect; conflicting key reuse is rejected, attempt limits are respected, and the stored outcome can be returned after process restart.
+
+**Prepared reference (2026-10-06):** [Looping caller and duplicate order protection](TECHNICAL-NOTEBOOK.md#13-protecting-an-api-from-a-looping-service-and-duplicate-orders---2026-10-06). Design explanation only; implementation, overload/concurrency drills, and learner review remain pending.
 
 **Execution record, implementation commit, and learner review:** pending.
 
@@ -712,6 +716,8 @@ to the shared catalog; each entry supplies the question-specific exercise.
 **Required evidence:** Document the sustainable rate and first limiting resource; show bounded resource use and explicit overload responses at excess load, then demonstrate whether additional replicas actually improve completed-request throughput.
 
 **Prepared reference (2026-10-06):** [Orderflow CAP and scaling discussion](TECHNICAL-NOTEBOOK.md#12-cap-scaling-traffic-caching-database-optimization-and-sharding---2026-10-06). Explanation only; live practice, verification, and learner review remain pending.
+
+**Prepared reference (2026-10-06):** [Looping caller and duplicate order protection](TECHNICAL-NOTEBOOK.md#13-protecting-an-api-from-a-looping-service-and-duplicate-orders---2026-10-06). Design explanation only; implementation, overload/concurrency drills, and learner review remain pending.
 
 **Execution record, implementation commit, and learner review:** pending.
 

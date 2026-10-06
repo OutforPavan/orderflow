@@ -245,3 +245,22 @@ still leave stale cache data; what if an order commits but its response is lost;
 why does sharding not cure one hot SKU; how would replica lag affect a just-created
 order? Reference answers and planned practical checks are in chapter 12. Learner
 practice and review remain pending; no PDF question is marked Covered.
+
+
+## Another service loops API calls; prevent duplicate orders - 2026-10-06
+
+Learner asks how to prevent API failure and duplicate processing when a calling
+microservice loops requests. Trainer reference: [technical notebook chapter 13](TECHNICAL-NOTEBOOK.md#13-protecting-an-api-from-a-looping-service-and-duplicate-orders---2026-10-06).
+
+Answer outline: authenticate and authorize service identity; enforce caller and
+aggregate quotas before expensive work; cap concurrent work and isolate abusive
+callers; enforce durable key uniqueness with a request fingerprint; commit the
+claim, stock, order, and replay result together. Replays may return the first
+result without repeating effects. A caller rotating keys still requires quotas;
+one order per external checkout requires its own stable business uniqueness rule.
+
+Follow-ups: why is a circuit breaker insufficient for inbound abuse; what happens
+with simultaneous duplicates on two replicas; what if the first response is lost;
+what if the key or payload changes; what happens after key expiry? Answers and
+future checks are in chapter 13. No learner response, protection implementation,
+load result, or completion of a PDF exercise is claimed.

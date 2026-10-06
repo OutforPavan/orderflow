@@ -758,6 +758,7 @@ substitute for a learner explanation.
 | F012 | Interviewer asked for Spring Security in Orderflow; explain authentication/authorization and implementation first. | [Security guide](SPRING-SECURITY.md) and chapter 9 below | Reference prepared 2026-09-29; mechanism choice, implementation, practice, and learner answers pending |
 | F013 | How would a senior engineer improve a slow OrderEntry landing page? | Chapter 10: measurement, critical path, targeted fixes, cache correctness, and verification | Interview reference prepared 2026-10-06; no actual diagnosis, optimization, or learner practice claimed |
 | F014 | How do CAP, scaling, traffic control, caching, DB optimization, and sharding apply to Orderflow? | Chapter 12: flash-sale choices, failure modes, and interview follow-ups | Reference prepared 2026-10-06; current row locking distinguished from proposed infrastructure; implementation/practice pending |
+| F015 | How do we protect an API against another service looping calls and prevent duplicate orders? | Chapter 13: caller identity, shared quotas, bounded work, durable idempotency, and business uniqueness | Interview reference prepared 2026-10-06; protection implementation and learner practice pending |
 
 For each new question, add its context, attempted answer if any, correction,
 relevant source, proposed experiment, and evidence after execution. Keep open
@@ -1291,3 +1292,168 @@ replica counts and total connection budgets (O02/O03). Distributed topology and
 sharding exercises follow only when their prerequisites and target behavior are
 clear. Relevant PDF questions include P1-Q12, P1-Q28, P1-Q33, and P4-J15; their
 states remain Planned. No coverage count or learner proficiency is advanced here.
+
+## 13. Protecting an API from a looping service and duplicate orders - 2026-10-06
+
+The learner asks how to protect Orderflow when another service loops API calls
+and how to prevent duplicates. This is a proposed design and interview reference,
+not a diagnosed attack or installed protection. Current stock locking remains;
+authentication, gateway quotas, and durable request idempotency are not implemented.
+
+### Separate availability protection from business correctness
+
+Rate limiting/admission control protects finite resources. Idempotency prevents
+retries of one logical operation from repeating its effects. Neither substitutes
+for the other: duplicate lookups still cost resources, and an abusive client can
+submit fresh keys. Identical request bodies are not necessarily duplicate intents;
+a customer may intentionally buy the same product twice. Repeated GET requests
+usually do not need order-style deduplication, but still need overload protection.
+
+Suggested future path:
+
+```text
+Caller -> protected ingress -> authenticated caller quota -> bounded service work
+       -> transactional idempotency claim -> stock/order/result -> response
+```
+
+### Establish identity and enforce quotas before expensive work
+
+- Authenticate the calling service with an appropriate workload identity, such as
+  validated OAuth2 access tokens issued through client credentials, or mTLS. Enforce
+  operation permissions. A client-controlled `X-Service-Name` is not identity.
+- For JWTs verify signature, issuer, audience, expiry, and applicable authorization.
+  A rate-limit key should use the verified stable caller identity and operation,
+  plus tenant scope where relevant; it should not be the changing token text.
+- Apply coarse network/connection/request-size protections before costly processing,
+  then authenticated quotas. Restrict direct access so callers cannot bypass the
+  gateway; service-side authorization and bounded work still matter.
+- Use a token bucket or another explicit policy per caller/operation plus aggregate
+  capacity limits. An illustrative bucket might refill at 50 tokens/second with
+  capacity 100 and one token per request. Capacity bounds accumulated tokens;
+  it is not a strict maximum of 100 requests in every sliding one-second window.
+- When the quota is exhausted, return 429 with useful retry guidance such as
+  `Retry-After`. Do not enqueue every rejected request. Repeated idempotent replays
+  are also subject to rate limits. General temporary capacity exhaustion can use 503.
+- Coordinate quotas across ingress replicas, for example with atomic shared Redis
+  limiter state or deliberately allocated budgets. A separate full quota in each
+  JVM multiplies the effective allowance. Define limiter-outage behavior; critical
+  writes should not silently become unlimited when Redis is unavailable.
+- Alert on the offending identity and isolate/block its access if necessary.
+  Disabling future token issuance alone may not invalidate already issued JWTs;
+  enforce an immediate deny decision at the relevant authorization boundary when
+  required. Do not depend on the hostile caller respecting backoff instructions.
+
+[Spring Security JWT validation](https://docs.spring.io/spring-security/reference/servlet/oauth2/resource-server/jwt.html),
+[Spring Cloud Gateway RequestRateLimiter](https://docs.spring.io/spring-cloud-gateway/reference/spring-cloud-gateway-server-webflux/gatewayfilter-factories/requestratelimiter-factory.html).
+These are possible components, not a dependency/configuration change to Orderflow.
+
+Rate limits alone are insufficient when each accepted request takes a long time.
+Cap concurrent work, queue length, payload size, database/lock waits, and dependency
+duration; isolate expensive endpoints/clients where justified. A circuit breaker
+around an outgoing dependency can stop repeated failing downstream calls, but is
+not an inbound quota against a malicious caller. For network-level floods, enforce
+protection upstream before traffic saturates the service's own network capacity.
+
+### Durable idempotency for POST /api/orders
+
+The client creates a stable key for one intended order and reuses it for every
+retry of that intent:
+
+```http
+POST /api/orders
+Authorization: Bearer <access-token>
+Idempotency-Key: checkout-7f91
+Content-Type: application/json
+
+{"productId":1,"quantity":2,"serviceLevel":"STANDARD"}
+```
+
+Proposed database uniqueness boundary, with non-null columns:
+
+```sql
+UNIQUE (caller_id, operation, idempotency_key)
+```
+
+Include tenant/end-user scope if the authorization model requires it. Compute a
+fingerprint from a well-defined normalized request representation; include all
+client-supplied fields that change the business effect and account for API
+version/defaults. Do not add a changing server-derived price to the input fingerprint.
+Store the fingerprint, order ID, and replayable result in durable storage. Limit key length, validate input before allocating records, and budget storage
+so random keys cannot grow it without bound. Keys
+identify intent; they are not credentials and do not bypass authorization checks.
+
+| Condition | Proposed API behavior |
+| --- | --- |
+| New key | Atomically claim it, create one order, and persist its result. |
+| Same key, same request, completed | Return the recorded result without another stock reduction. |
+| Same key, different request | Reject key misuse; for this proposed contract, return 409. |
+| Same key while first transaction runs | Bound the wait; if unfinished at the limit, report a retryable in-progress conflict, never execute independently. |
+| Different key, same body | Usually a new intent; enforce a separate business uniqueness rule if the domain requires one. |
+
+Stripe is a real example of stable keys and parameter comparison; its particular
+failure/retention/status policies are not a universal requirement for this design.
+[Stripe idempotent requests](https://docs.stripe.com/api/idempotent_requests).
+
+### The concurrency and crash boundary
+
+For our short database-only order operation, a candidate design is one PostgreSQL
+transaction containing the idempotency claim, stock reservation, order insert,
+and completed replay result. Commit before reporting confirmed success. Use the
+existing stock lock in addition to the new uniqueness boundary.
+
+An atomic `INSERT ... ON CONFLICT DO NOTHING` can claim the key; never rely on
+`SELECT if absent -> INSERT` without database uniqueness. A concurrent insert can
+wait for the first transaction. If the first commits, the loser reads its result
+in a subsequent statement under READ COMMITTED; if it rolls back, a contender may
+claim the key. Bound lock/transaction waits and handle timeout outside the aborted
+transaction. Do not catch a JPA uniqueness failure and continue using a rollback-only
+transaction. [PostgreSQL INSERT](https://www.postgresql.org/docs/17/sql-insert.html).
+
+In this single-transaction design, an uncommitted processing row is not a separate
+durable job status visible to ordinary readers. The competing claim coordinates
+through uniqueness. A design that commits PROCESSING first needs extra ownership,
+lease/fencing, crash recovery, and reconciliation rules; it is a different design.
+
+Failure reasoning:
+
+- Crash before commit: database work rolls back; a retry can attempt the operation.
+- Crash or lost HTTP response after commit: the retry finds the committed result
+  and returns the same order without repeating its effects.
+- Payments/messages outside the database are not made atomic by this transaction.
+  They require their own idempotency/reconciliation or transactional outbox design.
+- Define retention and failure-result policy. For the initial design, successful
+  effects/results commit atomically; failed transactions can be retried. Do not
+  blindly store every transient error forever. Deleting a key removes that key's
+  replay protection, so choose retention against the documented retry horizon.
+
+If a caller changes the key for the same external checkout, an idempotency-key
+table alone cannot recognize it. When the business contract says one order per
+external checkout, require a stable checkout reference and a separate unique
+constraint such as `(caller_id, external_checkout_id)`. That field/model is not
+present in Orderflow today. Arbitrary new references from an authorized abuser
+still require quotas, authorization rules, and caller isolation.
+
+Do not promise exactly-once network delivery or that every duplicate packet is
+never received. The scoped guarantee is one committed business effect per accepted
+identity/key during the defined retention window, plus controlled incoming load.
+
+### Interview answer and pending practical verification
+
+Answer outline: authenticate and authorize the caller; enforce shared caller quotas
+and global concurrency budgets before DB work; isolate abusive identities; use a
+durable atomic idempotency boundary to replay retries without duplicate stock/order
+effects; add domain uniqueness when keys can change for the same business operation.
+
+Future live checks, not executed for this explanation:
+
+- Two API instances receive simultaneous identical keys: one order and one stock change.
+- Reuse a key with a different quantity: explicit conflict and no additional effect.
+- Drop the response after commit; retry after restart: same order/result.
+- Loop the same key and then random keys: both consume quotas; healthy callers retain capacity.
+- Attempt ingress bypass or forged service headers: access denied appropriately.
+- Slow the DB and interrupt limiter storage: bounded resources and deliberate errors.
+- Retry after key retention expires: demonstrate the documented guarantee boundary.
+
+Related planned labs: D04 (idempotency), R01/O02 (admission and overload), X01
+(identity/authorization). P1-Q02, P1-Q16, and P1-Q33 remain Planned; learner answers,
+implementation, and evidence are pending.
