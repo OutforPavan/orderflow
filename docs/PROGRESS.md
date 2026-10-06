@@ -84,6 +84,19 @@ The baseline endpoint is `GET /api/learning/status` and returns:
 
 ## Open questions and next steps
 
+### CAP and Orderflow scaling interview preparation - 2026-10-06
+
+- Prepared technical notebook chapter 12: CAP during partitions, application
+  scaling, burst handling, cache techniques/races, database optimization, and
+  shard-key tradeoffs using a hypothetical flash sale.
+- Inspected the current database stock lock and five-connection pool configuration;
+  distinguished existing behavior from future caches, replicas, messaging,
+  idempotency, and sharding. No production deployment or measured capacity is claimed.
+- Added interviewer follow-ups and references for P1-Q12, P1-Q28, P1-Q33, and P4-J15.
+  Their states remain Planned; learner answers and live drills are pending.
+- Documentation only. No application changes, load tests, or database operations.
+  Earlier learner checkpoints, security choice, and all coverage criteria remain open.
+
 ### Percentile and Future/CompletableFuture follow-ups - 2026-10-06
 
 - Explained p95/p99 using an illustrative request sample; no measurements taken.

@@ -222,3 +222,26 @@ The trainer ran [FuturesDemo.java](examples/FuturesDemo.java) successfully on Ja
 it uses in-memory lists and a local executor, without touching application data.
 Practice pending: explain thenApply versus thenCompose versus thenCombine, and
 why an immediate join before submitting another operation can serialize work.
+
+
+## CAP, scaling, cache, DB optimization, and sharding - 2026-10-06
+
+Learner asks how to demonstrate familiarity with these concepts in an order and
+inventory interview. Trainer-prepared reference: [technical notebook chapter 12](TECHNICAL-NOTEBOOK.md#12-cap-scaling-traffic-caching-database-optimization-and-sharding---2026-10-06).
+No learner answer, production experience, or measured improvement is attributed here.
+
+Answer structure: define the workload and stock invariant; explain partition
+behavior per operation; scale app replicas within the total DB/dependency budget;
+control overload and duplicate retries; cache suitable reads with explicit freshness;
+optimize measured SQL/locks; shard only with a justified distribution key and a plan
+for cross-shard work. Tie each choice to a failure case and observable evidence.
+
+Current code already locks a product row during order creation and price changes.
+Redis, request idempotency, Kafka/outbox, read replicas, and sharding are proposed
+learning topics, not installed features. The stock lock does not deduplicate retries.
+
+Prepared follow-ups: why can ten more app instances make latency worse; can eviction
+still leave stale cache data; what if an order commits but its response is lost;
+why does sharding not cure one hot SKU; how would replica lag affect a just-created
+order? Reference answers and planned practical checks are in chapter 12. Learner
+practice and review remain pending; no PDF question is marked Covered.

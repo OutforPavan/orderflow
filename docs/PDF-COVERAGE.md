@@ -350,6 +350,8 @@ to the shared catalog; each entry supplies the question-specific exercise.
 
 **Required evidence:** A throughput/latency comparison locates the shared limiting resource and shows why more instances stop helping; validate a targeted query, contention, or admission-control improvement without merely increasing every pool.
 
+**Prepared reference (2026-10-06):** [Orderflow CAP and scaling discussion](TECHNICAL-NOTEBOOK.md#12-cap-scaling-traffic-caching-database-optimization-and-sharding---2026-10-06). Explanation only; live practice, verification, and learner review remain pending.
+
 **Execution record, implementation commit, and learner review:** pending.
 
 </details>
@@ -622,6 +624,8 @@ to the shared catalog; each entry supplies the question-specific exercise.
 
 **Required evidence:** Tests document the actual consistency guarantee, show rolled-back writes do not publish uncommitted values, and demonstrate bounded staleness or version-safe behavior under the forced race; failure recovery and cache metrics are visible.
 
+**Prepared reference (2026-10-06):** [Orderflow CAP and scaling discussion](TECHNICAL-NOTEBOOK.md#12-cap-scaling-traffic-caching-database-optimization-and-sharding---2026-10-06). Explanation only; live practice, verification, and learner review remain pending.
+
 **Execution record, implementation commit, and learner review:** pending.
 
 </details>
@@ -706,6 +710,8 @@ to the shared catalog; each entry supplies the question-specific exercise.
 **Live practice / implementation:** Run a staged 1x-to-10x load experiment and measure saturation, database/downstream budgets, queue growth, instance startup time, and retry amplification; add admission control and scale only where measured capacity allows it.
 
 **Required evidence:** Document the sustainable rate and first limiting resource; show bounded resource use and explicit overload responses at excess load, then demonstrate whether additional replicas actually improve completed-request throughput.
+
+**Prepared reference (2026-10-06):** [Orderflow CAP and scaling discussion](TECHNICAL-NOTEBOOK.md#12-cap-scaling-traffic-caching-database-optimization-and-sharding---2026-10-06). Explanation only; live practice, verification, and learner review remain pending.
 
 **Execution record, implementation commit, and learner review:** pending.
 
@@ -1575,6 +1581,8 @@ to the shared catalog; each entry supplies the question-specific exercise.
 **Live practice / implementation:** Run a fixed aggregate workload against one and then multiple application instances sharing a deliberately capacity-limited database. Keep per-instance pool sizes unchanged first, then apply an explicit total connection budget.
 
 **Required evidence:** Compare aggregate connections, DB wait time, throughput, p95 latency, and errors. Show whether extra instances increase downstream contention and validate the connection-budget change under the same total workload.
+
+**Prepared reference (2026-10-06):** [Orderflow CAP and scaling discussion](TECHNICAL-NOTEBOOK.md#12-cap-scaling-traffic-caching-database-optimization-and-sharding---2026-10-06). Explanation only; live practice, verification, and learner review remain pending.
 
 **Execution record, implementation commit, and learner review:** pending.
 

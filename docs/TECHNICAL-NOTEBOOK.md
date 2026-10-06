@@ -757,6 +757,7 @@ substitute for a learner explanation.
 | F011 | Why use `CreateProductRequest` instead of accepting `Product` as POST input? | Chapter 5.2 and INTERVIEW-NOTES.md | Learner correctly identified field/type/validation control; API independence explained; conversion-versus-validation prediction pending |
 | F012 | Interviewer asked for Spring Security in Orderflow; explain authentication/authorization and implementation first. | [Security guide](SPRING-SECURITY.md) and chapter 9 below | Reference prepared 2026-09-29; mechanism choice, implementation, practice, and learner answers pending |
 | F013 | How would a senior engineer improve a slow OrderEntry landing page? | Chapter 10: measurement, critical path, targeted fixes, cache correctness, and verification | Interview reference prepared 2026-10-06; no actual diagnosis, optimization, or learner practice claimed |
+| F014 | How do CAP, scaling, traffic control, caching, DB optimization, and sharding apply to Orderflow? | Chapter 12: flash-sale choices, failure modes, and interview follow-ups | Reference prepared 2026-10-06; current row locking distinguished from proposed infrastructure; implementation/practice pending |
 
 For each new question, add its context, attempted answer if any, correction,
 relevant source, proposed experiment, and evidence after execution. Keep open
@@ -1000,3 +1001,293 @@ Security context also needs deliberate propagation for arbitrary worker tasks.
 Next follow-up: which method fits a second API that requires the first API's ID,
 and which fits two independent APIs? Trainer reference: thenCompose and thenCombine.
 Learner answer/practice remain pending. No production async feature was introduced.
+
+## 12. CAP, scaling, traffic, caching, database optimization, and sharding - 2026-10-06
+
+The learner requested an interview explanation using Orderflow. This chapter is
+trainer-prepared reference material, not a production incident report or completed
+scaling implementation. All traffic figures and future architectures below are
+illustrative. Learner answers, load experiments, and distributed failure drills
+remain pending.
+
+### Begin with the workload and the business invariant
+
+Consider a flash sale: many users browse Keyboard, fewer submit orders, and only
+one unit remains. We must distinguish browsing latency from confirmed-order
+correctness. Ask about peak requests per second, read/write mix, popular-product
+skew, latency/error objectives, acceptable data age, deployment regions, and cost.
+A million users registered is not a usable concurrency or capacity requirement.
+
+Current code: one Spring Boot application, PostgreSQL, JPA, and transactional
+single-product orders. `ProductRepository.findByIdForUpdate` uses
+`PESSIMISTIC_WRITE`. Order creation and product price changes use this lock.
+The order transaction validates/reserves stock and stores a pricing snapshot;
+its explicit flush sends SQL but does not commit. The connection pool is capped
+at five per application instance. There is no installed Redis cache, Kafka,
+distributed deployment, read replica, sharding, or authentication/owner model.
+
+Existing source anchors: [repository](../src/main/java/com/outforpavan/orderflow/product/ProductRepository.java),
+[order service](../src/main/java/com/outforpavan/orderflow/order/OrderService.java),
+[configuration](../src/main/resources/application.properties).
+
+### 12.1 CAP: choose behavior during loss of communication
+
+CAP concerns a distributed data service during a network partition:
+
+| Term | Meaning |
+| --- | --- |
+| Consistency | Linearizability: operations behave as if performed on one authoritative copy in an order respecting real time. This differs from ACID's use of consistency for invariants. |
+| Availability | Each request to a nonfailed node eventually completes under the service contract; returning errors for every operation does not satisfy it. This is not a p99 deadline or an uptime percentage. |
+| Partition tolerance | The model allows groups of nodes to lose communication; correctness/availability promises must account for it. |
+
+During such a partition, a service cannot guarantee both linearizable data access
+and availability on every side. The rule is not an unrestricted choice of any
+two properties at all times. [Gilbert and Lynch, Perspectives on the CAP Theorem](https://groups.csail.mit.edu/tds/papers/Gilbert/Brewer2.pdf).
+
+Orderflow example: two regions each last observed stock = 1, then lose contact.
+If both independently confirm an order against that shared unit, overselling can
+result. For confirmation, require the authoritative inventory owner/quorum;
+the isolated side must fail or defer confirmation. The reachable authoritative
+side may continue. Browsing may serve an older description or approximate stock
+display if the product contract allows it. A `202 PENDING` order changes the
+contract: acceptance for later processing is not a confirmed reservation.
+
+Make the choice per operation. Do not label an entire commerce application CP/AP
+without specifying its replication protocol, operations, and failure behavior.
+Advanced alternative: allocate disjoint inventory quotas to regions before a
+partition. Each can sell its own quota, but unused stock can be stranded elsewhere.
+This preserves a narrower local authority; it does not create globally fresh
+stock reads during a partition or invalidate CAP.
+
+### 12.2 Scaling the application
+
+Vertical scaling gives an instance more CPU/memory; horizontal scaling adds
+instances behind a load balancer. The former has hardware/cost limits; the latter
+requires deliberate handling of state, routing, and downstream capacity.
+
+For a future multi-instance Orderflow deployment:
+
+- Keep carts, sessions, idempotency records, and business state out of one JVM's
+  private memory when they must survive rerouting/restarts. A shared session store
+  is a valid option; JWT is not a prerequisite for horizontal scaling.
+- Use health/readiness checks and graceful draining during deployment. Scale on
+  measured saturation and demand; startup lag means known sales may need prescaling.
+- Budget aggregate database connections. With the current five-connection cap,
+  20 replicas permit up to 100 application connections, plus administration and
+  other consumers. More connections can worsen CPU/I/O/lock contention.
+- A Java `synchronized` block only coordinates one JVM. Current database row locking
+  coordinates all instances using the same database authority and transaction rules.
+- More threads, virtual threads, or CompletableFutures do not increase a database's
+  ability to update the same contended product row. Microservice extraction is
+  justified by boundaries and independent needs, not required to add app replicas.
+
+If CPU is saturated in application calculations, app replicas may help. If requests
+mostly wait for the same database lock, replicas may increase waiting. Measure
+completed throughput, p95/p99, errors, pool waits, DB I/O, and lock waits together.
+No instance count or capacity improvement has been measured in this project.
+
+### 12.3 A sudden traffic surge
+
+Treat incoming demand as bounded work, not an unlimited queue:
+
+1. Establish capacity under representative read/write mix, data volume, and hot keys.
+2. Rate-limit excessive clients/tenants, limit request size, cap concurrent work,
+   and use bounded queues. Usually return 429 for a client rate policy and 503 for
+   service overload; expose deliberate retry behavior.
+3. Set request/dependency deadlines, use limited retries with backoff and jitter,
+   and prevent retries from multiplying overload. Retry only operations whose
+   semantics are safe or protected by durable idempotency.
+4. Cache suitable reads, defer optional landing-page panels, and reserve capacity
+   for order placement. Bulkheads can isolate optional work from checkout resources.
+5. Move email, analytics, and other deferrable work off the confirmation path.
+   For reliable future event publication, write an outbox row with the order in
+   the same transaction; publish separately and make consumers idempotent.
+
+[AWS throttling guidance](https://docs.aws.amazon.com/wellarchitected/latest/reliability-pillar/rel_mitigate_interaction_failure_throttle_requests.html),
+[AWS retry guidance](https://docs.aws.amazon.com/wellarchitected/latest/reliability-pillar/rel_mitigate_interaction_failure_limit_retries.html).
+
+A broker absorbs a temporary burst only within its capacity and retention limits.
+If arrival rate remains above processing rate, backlog grows. Queueing order
+placement itself requires durable acceptance, a pending status, status lookup,
+failure handling, and explicit queue bounds. Do not respond with confirmed success
+before inventory has actually been reserved.
+
+Critical interview case: the order commits but its HTTP response is lost. Retrying
+the POST without protection can create a second order. A future idempotency design
+would bind a client key to the authenticated caller/tenant and a request fingerprint,
+enforce uniqueness durably, and store the result consistently with the stock/order
+transaction. Same key plus different body must be rejected. Current Orderflow has
+neither that idempotency feature nor a caller model. A stock lock prevents a race
+over units; it does not identify duplicate business requests.
+
+### 12.4 Caching techniques and correctness
+
+Cache product/reference DTOs when the cost and read frequency justify it and the
+freshness policy permits it. A displayed stock value can be approximate; order
+confirmation still uses authoritative inventory and current pricing rules.
+
+| Technique | Behavior and tradeoff |
+| --- | --- |
+| Cache-aside | Application checks cache, loads DB on a miss, then fills cache. Simple for repeated reads; application owns expiry and invalidation. |
+| Read-through | Cache/loader integration fetches missing values; the loading location changes, but freshness still needs a policy. |
+| Write-through | Writes synchronously pass through a cache layer to persistence. Specify failure/atomicity semantics; two successful writes are not automatically a distributed transaction. |
+| Write-behind | Persistence happens later. Requires a durable queue/recovery design and tolerable delay; a naive memory buffer is unsafe for confirmed stock/orders. |
+| Refresh-ahead | Refresh hot entries before expiry; avoids some misses but spends resources and still needs version/freshness control. |
+
+Cache-aside flow: GET product -> check key -> on miss load database -> put DTO with
+TTL -> return. On a product write, commit the database transaction before publishing
+the new value or invalidating its cache entry. For a hypothetical catalogue-only
+DTO, an illustrative TTL could be tens of seconds; this is a business decision,
+not a prescribed value for stock. Spring `@Cacheable` provides an abstraction,
+not a complete distributed consistency design.
+[Spring cache abstraction](https://docs.spring.io/spring-framework/reference/integration/cache/strategies.html),
+[Microsoft cache-aside pattern](https://learn.microsoft.com/en-us/azure/architecture/patterns/cache-aside).
+
+After-commit invalidation still permits a race:
+
+```text
+Reader: cache miss -> reads old DB value ----------------> fills old value
+Writer:                      commits new value -> evicts
+```
+
+The late fill recreates stale data. Also, a process can die after commit before
+invalidation. TTL limits an entry's lifetime, not a strict global data-age bound
+regardless of delayed reads or lagging sources. Stronger needs may require
+version/generation-aware population plus durable invalidation via outbox/CDC,
+or bypassing the cache for the operation. Durable events alone do not stop a
+delayed reader from overwriting a newer cache state without version control.
+
+Other failure cases and mitigations:
+
+- Stampede: many requests miss one expired popular key. Coalesce same-key fills
+  and limit concurrent DB reloads. Jitter spreads expiry of different keys; it
+  does not by itself solve simultaneous misses on one key.
+- Cache outage: uncontrolled DB fallback can overwhelm the database. Bound fallback
+  traffic and degrade suitable optional reads; test this path, not just warm hits.
+- Repeated nonexistent IDs: consider short negative caching with size controls
+  and correct invalidation when a product is created.
+- Authorization leaks: keys must include applicable tenant/user, locale, currency,
+  and representation dimensions. Do not share private order responses globally.
+
+Local Caffeine avoids a network hop but each replica holds its own entries and
+needs coordinated freshness. Shared Redis enables common cache state but adds
+network latency and another dependency. A two-level cache adds another invalidation
+problem; adopt it only for measured needs. Evaluate hit rate alongside miss latency,
+memory/evictions, backend load, stale-data incidents, and outage behavior.
+
+### 12.5 Database optimization
+
+Start with slow-query and trace evidence. Determine whether time is spent acquiring
+a connection, executing SQL, waiting on locks, transferring rows, or mapping results.
+Use `EXPLAIN (ANALYZE, BUFFERS)` in a safe environment to inspect actual vs estimated
+rows, access paths, and I/O. ANALYZE executes the statement; it is not a harmless
+way to inspect an arbitrary production write. [PostgreSQL EXPLAIN](https://www.postgresql.org/docs/17/using-explain.html).
+
+Optimize the observed workload:
+
+- Add indexes for actual filters, joins, and sort order. The product primary key
+  already has an index; indexing it again is not an optimization. Additional
+  indexes consume space and slow writes. Not every sequential scan is a problem.
+- Return required columns/DTO projections and bounded pages. Keyset pagination
+  can avoid the cost of skipping a deep offset when navigation requirements fit.
+- Detect N+1 SQL when relationships are introduced; use explicit fetching,
+  projections, or batching. Setting every relationship EAGER is not a solution.
+- Keep transactions and lock duration short. Do not hold a product lock while
+  waiting for an email/payment HTTP call. Multi-product reservations need consistent
+  lock ordering, deadlock handling, and bounded retries where safe.
+- Check statistics/autovacuum, storage I/O, connection usage, and row contention
+  when evidence points there. Adding a read replica helps suitable reads, not
+  a saturated write primary; replica lag can break immediate read-after-order UX.
+
+Future example, NOT a migration for the current schema: if customer ownership is
+added and the dominant query lists one customer's newest orders, an index on
+`(customer_id, created_at DESC, id DESC)` can support that filter/order pattern.
+Choose tenant scope and pagination semantics first, then verify the plan. The
+current `orders` model has no `customer_id`.
+
+Current pessimistic locking prevents concurrent stock modifications from making
+the same stale check while the transaction is active. PostgreSQL row locks are
+released at transaction end; competing writers wait, while ordinary MVCC reads
+are not blocked by the row lock alone. [PostgreSQL locking](https://www.postgresql.org/docs/17/explicit-locking.html).
+
+An alternative stock-reservation design, not installed in this lesson:
+
+```sql
+UPDATE products
+SET stock = stock - :quantity
+WHERE id = :productId
+  AND stock >= :quantity;
+```
+
+Require positive quantity. One affected row means reserved; zero means missing
+product or insufficient stock, with an explicit API policy to distinguish them.
+Insert the order in the same transaction so failure rolls back the decrement.
+At PostgreSQL READ COMMITTED a competing UPDATE waits and rechecks its condition
+against the updated row. This combines the stock check/change but does not remove
+hot-row serialization. Coordinate price snapshots and all other writers as well;
+this snippet alone is not a replacement for the complete current service.
+[PostgreSQL isolation](https://www.postgresql.org/docs/17/transaction-iso.html).
+
+`@Transactional` supplies a transaction boundary; it does not by itself make every
+read-modify-write algorithm safe. Optimistic version checks are another option,
+with conflict/retry costs under contention. Choose using the contention profile.
+
+### 12.6 Partitioning, replication, and sharding
+
+| Technique | Orderflow example | Main limitation |
+| --- | --- | --- |
+| Replication | Copy the same orders to another database for reads/recovery. | Reads can lag; ordinary replicas do not divide primary write work. |
+| Table partitioning | Split orders by creation month within a PostgreSQL database. | Helps pruning/retention when queries fit; still shares that server's resources. |
+| Sharding | Distribute different subsets of orders across independent databases. | Adds routing, skew, resharding, and cross-shard coordination. |
+
+Monthly partitioning is useful only when requirements justify it. Partition pruning
+needs usable predicates on the partition key. PostgreSQL partitioned uniqueness
+constraints also have restrictions, so this is not a drop-in change to an existing
+global-ID primary key. [PostgreSQL partitioning](https://www.postgresql.org/docs/17/ddl-partitioning.html).
+
+Choose a shard key from access patterns and transaction boundaries:
+
+| Candidate key | Benefit | Cost |
+| --- | --- | --- |
+| tenantId, if business tenants are introduced | Co-locates one tenant's orders and related data. | One large tenant may dominate a shard; global inventory may still be separate. |
+| customerId, after ownership is introduced | Efficient customer order history. | Shared product inventory and analytics may require other shards. |
+| hash(orderId) | Distributes order records broadly. | Customer history can fan out; inventory does not become local automatically. |
+| productId/warehouseId for inventory | Locates the corresponding stock authority. | Multi-product orders can span shards; a viral SKU can remain a hot key. |
+
+These are future models, not existing fields/features. Sharding by product ID
+does not divide writes to one popular product across shards. Address that hotspot
+separately, for example by admission control or carefully allocated inventory
+buckets with explicit invariants. More shards do not automatically fix skew.
+
+Plan cross-shard joins/transactions, unique IDs, durable idempotency scope, reporting,
+backup/recovery, routing changes, and online movement. A naive `hash(id) % N` router
+can remap many records when N changes; use a migration-aware routing strategy.
+Distributed transactions or a saga/reservation workflow are deliberate alternatives;
+a saga has intermediate states and compensations, not local ACID behavior.
+[Microsoft sharding pattern](https://learn.microsoft.com/en-us/azure/architecture/patterns/sharding),
+[Citus distribution-column guidance](https://docs.citusdata.com/en/stable/sharding/data_modeling.html).
+
+Shard only after measurements show that simpler query/transaction fixes, suitable
+caching, vertical capacity, and read scaling cannot meet the workload economically.
+Splitting into microservices does not itself split database data or eliminate this
+analysis.
+
+### Interview follow-ups and future evidence
+
+| Follow-up | Reference answer |
+| --- | --- |
+| Why did adding ten app instances fail to improve throughput? | Locate the shared bottleneck: DB CPU/I/O, pool budget, row lock, or downstream capacity; compare completed work and wait times. |
+| Will Redis guarantee no overselling? | A cached display does not enforce stock correctness. Current authority is the transactional database; moving inventory authority requires a separate durability/consistency design. |
+| Is eviction after commit enough for strict freshness? | No; delayed stale fills and commit-to-invalidation crashes need explicit handling. |
+| Can retries create duplicate orders even with locks? | Yes. Locking serializes stock access; durable idempotency identifies retries of the same intent. |
+| Can Kafka fix a permanently slower database? | It can buffer/defer work, but sustained excess arrival rate grows backlog; reduce demand or increase effective processing capacity. |
+| Will sharding cure one hot SKU? | Not if all its updates still route to the same shard/row. |
+| What would establish that the design works? | Representative load, last-unit races, timeout/retry duplicates, cold/failed cache, partition/replica-lag drills, and measured latency/errors/correctness. |
+
+Prepared practice sequence, to implement with the learner: measure current API/DB
+behavior (O02/D02), verify stock contention (D03), add durable request idempotency
+(D04), introduce catalogue caching and force invalidation races (C01), then compare
+replica counts and total connection budgets (O02/O03). Distributed topology and
+sharding exercises follow only when their prerequisites and target behavior are
+clear. Relevant PDF questions include P1-Q12, P1-Q28, P1-Q33, and P4-J15; their
+states remain Planned. No coverage count or learner proficiency is advanced here.
