@@ -932,3 +932,71 @@ Reference follow-ups: Why not simply add Redis? What if the API is fast but the
 screen is slow? Can independent calls always run in parallel? Which data may be
 stale safely? Why can increasing the connection pool worsen the bottleneck?
 Trainer answers are above; learner responses and experiments remain pending.
+
+
+### Follow-up: API p95 and p99
+
+The learner asked what these latency percentiles mean. For the same endpoint and
+measurement window, p95 is approximately the response time within which 95% of
+requests finish; p99 covers approximately 99%. In an illustrative 1,000-request
+sample, p95 = 300 ms leaves about 50 slower requests, while p99 = 1,200 ms leaves
+about 10 slower requests. Quantile estimation and ties affect exact counts.
+These describe tail latency, not causes; compare alongside errors, traffic, and
+load conditions. No application latency was measured for this explanation.
+
+## 11. Future and CompletableFuture - 2026-10-06
+
+The learner clarified the intended comparison as Future versus CompletableFuture.
+Future<T> is an interface representing a possibly pending result. An executor's
+submit commonly returns one. get() waits if incomplete; polling/status and Java
+21 resultNow() APIs also exist. The Future interface does not expose continuation
+chaining or public manual completion.
+[Java 21 Future](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/Future.html).
+
+CompletableFuture<T> implements Future<T> and CompletionStage<T>. It adds explicit
+completion and dependency composition. Constructing an empty future starts no
+work. Both get() and join() can block. get() declares checked interruption/failure
+exceptions; join() typically wraps exceptional completion in CompletionException.
+Async operations normally use the common pool unless an executor is supplied;
+non-Async continuations may run inline/on a completing thread. A custom executor
+on supplyAsync does not automatically configure later Async stages.
+Timeout completion and CompletableFuture cancellation do not inherently stop the
+underlying operation; CompletableFuture.cancel(true) does not interrupt its work.
+[Java 21 CompletableFuture](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/CompletableFuture.html).
+
+| Method | Intended use |
+| --- | --- |
+| thenApply | Transform a value. |
+| thenCompose | Chain an operation returning another stage and flatten the result. |
+| thenCombine | Combine two completed results; original operations must be submitted independently to overlap. |
+| exceptionally | Recover from failure with a replacement value. |
+| handle | Transform success or failure into an outcome. |
+| whenComplete | Observe completion; a throwing observer can affect the returned stage. |
+
+These operations describe dependencies rather than promising new threads for
+every step. [CompletionStage](https://docs.oracle.com/en/java/javase/21/docs/api/java.base/java/util/concurrent/CompletionStage.html).
+
+[Standalone Java 21 example](examples/FuturesDemo.java) submits independent
+in-memory product/customer reads to a two-thread executor and combines them into
+OrderPage. The trainer ran it with the project-local Java 21 source-file launcher:
+
+```text
+Future products: [Keyboard, Mouse]
+Combined page: OrderPage[products=[Keyboard, Mouse], customers=[Alice, Bob]]
+```
+
+This is a composition demonstration, not an API/database benchmark or proof of
+speedup. Its executor is closed at the end of the standalone program. In a server,
+manage executor lifetime centrally and bound queues/admission/downstream load;
+do not create and close a pool in each request. Calling get/join immediately
+before submitting the second task would prevent their useful overlap.
+
+Do not split stock reservation and order persistence across workers and assume
+one Spring transaction follows them. Ordinary Spring transactions are thread-bound.
+Security context also needs deliberate propagation for arbitrary worker tasks.
+[Transaction threading](https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/transaction/annotation/Transactional.html),
+[security context concurrency](https://docs.spring.io/spring-security/reference/servlet/integrations/concurrency.html).
+
+Next follow-up: which method fits a second API that requires the first API's ID,
+and which fits two independent APIs? Trainer reference: thenCompose and thenCombine.
+Learner answer/practice remain pending. No production async feature was introduced.

@@ -84,6 +84,16 @@ The baseline endpoint is `GET /api/learning/status` and returns:
 
 ## Open questions and next steps
 
+### Percentile and Future/CompletableFuture follow-ups - 2026-10-06
+
+- Explained p95/p99 using an illustrative request sample; no measurements taken.
+- Learner clarified the next question as Future versus CompletableFuture.
+  Prepared the comparison, composition/error/threading details, and a standalone
+  Java 21 example under docs/examples. Trainer execution produced the expected
+  product list and combined page; no database or HTTP requests were made.
+- No application async behavior was introduced and no performance gain is claimed.
+  Learner practice, earlier checkpoints, and full coverage criteria remain pending.
+
 ### OrderEntry performance interview preparation - 2026-10-06
 
 - Learner requested a senior-engineer answer to a Capgemini question about a slow

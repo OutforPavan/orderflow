@@ -204,3 +204,21 @@ for conditional fixes, official references, and hypothetical examples. Do not
 present those examples as personal production results. No benchmark was run and
 no observed improvement percentage is claimed. Learner answer and review pending;
 this does not close a PDF question or broader curriculum requirement.
+
+
+## Follow-ups: latency percentiles and Java futures - 2026-10-06
+
+The learner asked for p95/p99 definitions, then clarified the concurrency question
+as Future versus CompletableFuture. Explanations are in technical notebook chapter
+10's percentile follow-up and chapter 11. These are trainer-prepared references;
+no reviewed learner answers or performance improvements are recorded.
+
+Key interview distinction: both types can represent asynchronous results and both
+can be used with blocking waits. CompletableFuture adds explicit completion,
+continuations, combination, and recovery. Its composition API does not automatically
+make every step parallel or propagate Spring transactions to new threads.
+
+The trainer ran [FuturesDemo.java](examples/FuturesDemo.java) successfully on Java 21;
+it uses in-memory lists and a local executor, without touching application data.
+Practice pending: explain thenApply versus thenCompose versus thenCombine, and
+why an immediate join before submitting another operation can serialize work.
