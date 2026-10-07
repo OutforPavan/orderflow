@@ -326,3 +326,25 @@ code paths. Technical notebook section 14.7 prepares that scenario, distinguishi
 public routing from OrderService checkout orchestration and local transactions
 from a durable distributed workflow. This is a hypothetical design, not a service
 extraction or deployed system. Learner explanation and practice remain pending.
+
+## Four-service implementation reference — 2026-10-07
+
+The learner requested the full shopping lab and chose Keycloak and locally generated
+certificates. [Notebook section 15](TECHNICAL-NOTEBOOK.md#15-implemented-four-service-checkout--2026-10-07)
+and the [lab guide](MICROSERVICES-LAB.md) now explain the implemented modules.
+
+Suggested opening answer (trainer reference, not a learner-demonstrated answer):
+
+> Our gateway is a separate Spring Boot application that routes public requests and
+> validates Keycloak JWTs. Each service also validates tokens and enforces its own
+> permissions and ownership. Internal calls use certificate-authenticated HTTPS.
+> OrderService persists a Saga, reserves inventory, requests payment and compensates
+> a definite payment decline by releasing stock. Stable operation IDs make retries
+> safe. Circuit breakers bound dependency failures, and a short-lived availability
+> cache never decides whether stock can be reserved. We favor authoritative write
+> correctness during outages and accept briefly stale display reads.
+
+Follow-up review must cover the lost-payment-response case, service versus user
+identity, lease expiry, compensation failure, cache freshness, and why CAP is not
+an application-wide configuration flag. [Trainer evidence](labs/INTERVIEW-microservices.md)
+is distinct from the still-pending learner practice. Completion remains unchanged.

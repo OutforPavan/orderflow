@@ -1,0 +1,64 @@
+server:
+  address: 127.0.0.1
+  port: ${ORDER_PORT:8081}
+  shutdown: graceful
+  ssl:
+    bundle: server
+    client-auth: need
+spring:
+  application:
+    name: order-service
+  config:
+    import: optional:file:${PLATFORM_CONFIG_DIR:.tools/platform/config}/order-service.properties
+  ssl:
+    bundle:
+      pem:
+        server:
+          keystore:
+            certificate: ${PLATFORM_PKI_DIR:${platform.root:.}/.tools/platform/pki}/order-service.crt
+            private-key: ${PLATFORM_PKI_DIR:${platform.root:.}/.tools/platform/pki}/order-service.key
+          truststore:
+            certificate: ${PLATFORM_PKI_DIR:${platform.root:.}/.tools/platform/pki}/ca.crt
+        client:
+          keystore:
+            certificate: ${PLATFORM_PKI_DIR:${platform.root:.}/.tools/platform/pki}/order-service.crt
+            private-key: ${PLATFORM_PKI_DIR:${platform.root:.}/.tools/platform/pki}/order-service.key
+          truststore:
+            certificate: ${PLATFORM_PKI_DIR:${platform.root:.}/.tools/platform/pki}/ca.crt
+  datasource:
+    hikari:
+      maximum-pool-size: 5
+      connection-timeout: 2000
+  jackson:
+    deserialization:
+      fail-on-unknown-properties: true
+      accept-float-as-int: false
+    datatype:
+      enum:
+        fail-on-numbers-for-enums: true
+  lifecycle:
+    timeout-per-shutdown-phase: 10s
+  cloud:
+    circuitbreaker:
+      resilience4j:
+        enabled: false # Explicit registries below: one breaker per remote participant.
+clients:
+  inventory-url: ${INVENTORY_SERVICE_URL:https://localhost:8082}
+  payment-url: ${PAYMENT_SERVICE_URL:https://localhost:8083}
+  connect-timeout: 1s
+  read-timeout: 2s
+saga:
+  enabled: true
+  poll-interval: 500
+  lease-seconds: 15
+pricing:
+  discount-all-products: false
+  discount-product-ids: []
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never

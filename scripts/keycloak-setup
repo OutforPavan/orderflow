@@ -1,0 +1,64 @@
+#!/usr/bin/env python3
+"""Install the pinned official release; keep generated credentials outside source control."""
+import hashlib
+import json
+import os
+from pathlib import Path
+import secrets
+import shutil
+import stat
+import subprocess
+import tempfile
+import zipfile
+
+ROOT = Path(__file__).resolve().parents[1]
+TOOLS = ROOT / '.tools/platform'
+VERSION = '26.8.0'
+# Official GitHub release asset digest, retrieved from the Keycloak release API.
+SHA256 = '7ed1de3fda2598369262613bf682aab7e233d80a38c405e91588f7a7454370a1'
+URL = f'https://github.com/keycloak/keycloak/releases/download/{VERSION}/keycloak-{VERSION}.zip'
+HOME = TOOLS/f'keycloak-{VERSION}'
+os.umask(0o077)
+TOOLS.mkdir(parents=True, exist_ok=True)
+if not (HOME/'bin/kc.sh').exists():
+    archive = TOOLS/f'keycloak-{VERSION}.zip'
+    if not archive.exists():
+        partial = archive.with_suffix('.zip.part')
+        subprocess.run(['curl', '--fail', '--location', '--retry', '2', '--output', str(partial), URL], check=True)
+        partial.rename(archive)
+    with archive.open('rb') as stream:
+        digest = hashlib.file_digest(stream, 'sha256').hexdigest() if hasattr(hashlib, 'file_digest') else hashlib.sha256(stream.read()).hexdigest()
+    if digest != SHA256:
+        raise SystemExit('Keycloak checksum mismatch; download rejected. Remove the corrupted archive before retrying.')
+    with tempfile.TemporaryDirectory(prefix='keycloak-extract-', dir=TOOLS) as work:
+        destination = Path(work)
+        with zipfile.ZipFile(archive) as source:
+            for member in source.infolist():
+                path = Path(member.filename)
+                mode = member.external_attr >> 16
+                if path.is_absolute() or '..' in path.parts or not path.parts or path.parts[0] != f'keycloak-{VERSION}' or stat.S_ISLNK(mode):
+                    raise SystemExit('Unsafe path or symlink in Keycloak archive.')
+            source.extractall(destination)
+        shutil.move(destination/f'keycloak-{VERSION}', HOME)
+    (HOME/'bin/kc.sh').chmod(0o700)
+    (HOME/'bin/kcadm.sh').chmod(0o700)
+
+secrets_path = TOOLS/'keycloak-users.json'
+if not secrets_path.exists():
+    users = {name: secrets.token_urlsafe(24) for name in ('alice', 'bob', 'admin', 'bootstrap-admin')}
+    secrets_path.write_text(json.dumps(users, indent=2)+'\n')
+    secrets_path.chmod(0o600)
+else:
+    users = json.loads(secrets_path.read_text())
+realm = json.loads((ROOT/'config/keycloak/orderflow-realm.json').read_text())
+realm['users'] = [{
+    'username': name, 'enabled': True, 'emailVerified': True,
+    'firstName': name.capitalize(), 'lastName': 'Local Lab', 'email': f'{name}@orderflow.local',
+    'realmRoles': ['admin', 'customer'] if name == 'admin' else ['customer'],
+    'credentials': [{'type':'password', 'value': users[name], 'temporary':False}]
+} for name in ('alice', 'bob', 'admin')]
+imports = HOME/'data/import'
+imports.mkdir(parents=True, exist_ok=True)
+(imports/'orderflow-realm.json').write_text(json.dumps(realm, indent=2)+'\n')
+print(f'Keycloak {VERSION} verified and prepared. Generated credentials: {secrets_path}')
+print('First startup imports the realm; later starts preserve its existing state.')

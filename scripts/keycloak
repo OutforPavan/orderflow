@@ -1,0 +1,109 @@
+#!/usr/bin/env python3
+"""Local-only Keycloak lifecycle and token helper. Tokens/credentials are never logged."""
+import json
+import os
+from pathlib import Path
+import signal
+import ssl
+import subprocess
+import sys
+import time
+import urllib.parse
+import urllib.request
+
+ROOT = Path(__file__).resolve().parents[1]
+TOOLS = ROOT/'.tools/platform'
+HOME = TOOLS/'keycloak-26.8.0'
+PKI = Path(os.environ.get('PLATFORM_PKI_DIR', TOOLS/'pki')).resolve()
+PID = TOOLS/'keycloak.pid'
+LOG = TOOLS/'keycloak.log'
+ISSUER = 'https://localhost:8443/realms/orderflow'
+os.umask(0o077)
+
+def alive():
+    if not PID.exists():
+        return False
+    try:
+        pid = int(PID.read_text())
+        if pid <= 1:
+            raise ValueError('invalid PID')
+        os.kill(pid, 0)
+        description = subprocess.run(['ps', '-ww', '-p', str(pid), '-o', 'stat=,command='], capture_output=True, text=True).stdout.strip()
+        if not description or description.split()[0].startswith('Z'):
+            return False
+        if str(HOME) not in description:
+            raise SystemExit('Stored PID belongs to another process; refusing to manage it.')
+        return True
+    except (ProcessLookupError, ValueError):
+        return False
+
+def context():
+    return ssl.create_default_context(cafile=str(PKI/'ca.crt'))
+
+def java_home():
+    candidates = [str(ROOT/'.tools/java21/Contents/Home'), os.environ.get('JAVA_HOME')]
+    for candidate in candidates:
+        if candidate and (Path(candidate)/'bin/java').exists():
+            version = subprocess.run([str(Path(candidate)/'bin/java'), '-version'], capture_output=True, text=True)
+            if 'version \"21' in version.stderr:
+                return candidate
+    raise SystemExit('Set JAVA_HOME to JDK 21 or install the project local Java 21 runtime.')
+
+command = sys.argv[1] if len(sys.argv) > 1 else 'status'
+if command == 'start':
+    if alive():
+        print('Keycloak is already running.')
+        sys.exit(0)
+    if not (HOME/'bin/kc.sh').exists():
+        raise SystemExit('Run ./scripts/local-pki and ./scripts/keycloak-setup first.')
+    users = json.loads((TOOLS/'keycloak-users.json').read_text())
+    env = dict(os.environ, JAVA_HOME=java_home(), KC_BOOTSTRAP_ADMIN_USERNAME='bootstrap-admin',
+               KC_BOOTSTRAP_ADMIN_PASSWORD=users['bootstrap-admin'],
+               JAVA_OPTS_KC_HEAP='-Xms128m -Xmx512m')
+    with LOG.open('ab') as log:
+        process = subprocess.Popen([str(HOME/'bin/kc.sh'), 'start', '--db=dev-file', '--cache=local', '--import-realm',
+            '--http-enabled=false', '--http-host=127.0.0.1', '--hostname=https://localhost:8443',
+            '--https-port=8443', '--https-certificate-file='+str(PKI/'keycloak.crt'),
+            '--https-certificate-key-file='+str(PKI/'keycloak.key')],
+            env=env, cwd=HOME, stdin=subprocess.DEVNULL, stdout=log, stderr=log, start_new_session=True)
+    PID.write_text(str(process.pid))
+    print(f'Started local Keycloak pid {process.pid}; log: {LOG}')
+elif command == 'stop':
+    if alive():
+        pid = int(PID.read_text())
+        # alive() checks this checkout's process identity before signaling it.
+        os.kill(pid, signal.SIGTERM)
+        for _ in range(100):
+            if not alive():
+                break
+            time.sleep(0.1)
+        else:
+            raise SystemExit('Keycloak is still stopping. Its PID file was preserved; check status before retrying.')
+    PID.unlink(missing_ok=True)
+    print('Keycloak stop requested.')
+elif command == 'status':
+    try:
+        with urllib.request.urlopen(ISSUER+'/.well-known/openid-configuration', context=context(), timeout=3) as response:
+            assert json.load(response)['issuer'] == ISSUER
+        print('Keycloak HTTPS issuer ready: '+ISSUER)
+    except Exception as error:
+        raise SystemExit('Keycloak is not ready: '+str(error))
+elif command == 'token':
+    username = sys.argv[2] if len(sys.argv) > 2 else 'alice'
+    if username not in ('alice', 'bob', 'admin'):
+        raise SystemExit('Use one local fixture: alice, bob, admin.')
+    if len(sys.argv) != 4:
+        raise SystemExit('Usage: ./scripts/keycloak token alice PATH_TO_PRIVATE_TOKEN_FILE')
+    users = json.loads((TOOLS/'keycloak-users.json').read_text())
+    data = urllib.parse.urlencode({'grant_type':'password', 'client_id':'orderflow-lab',
+                                 'username':username, 'password':users[username]}).encode()
+    request = urllib.request.Request(ISSUER+'/protocol/openid-connect/token', data=data)
+    with urllib.request.urlopen(request, context=context(), timeout=10) as response:
+        token = json.load(response)['access_token']
+    target = Path(sys.argv[3]).resolve()
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(token+'\n')
+    target.chmod(0o600)
+    print(f'Short-lived {username} bearer token saved to {target}')
+else:
+    raise SystemExit('Usage: ./scripts/keycloak start|stop|status|token alice FILE')

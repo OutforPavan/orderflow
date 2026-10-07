@@ -1,0 +1,76 @@
+#!/usr/bin/env python3
+"""Isolated local PostgreSQL cluster with service-owned databases and generated secrets."""
+import json
+import os
+from pathlib import Path
+import secrets
+import subprocess
+import sys
+
+ROOT = Path(__file__).resolve().parent.parent
+RUNTIME = ROOT / '.tools/platform'
+DATA = RUNTIME / 'postgres/data'
+PORT = int(os.environ.get('PLATFORM_PG_PORT', '54339'))
+BIN = Path(os.environ.get('ORDERFLOW_PG_BIN', str(ROOT / '.tools/postgres/Postgres.app/Contents/Versions/17/bin')))
+
+def run(args, **kwargs):
+    return subprocess.run([str(x) for x in args], check=True, **kwargs)
+
+def main():
+    action = sys.argv[1] if len(sys.argv) > 1 else 'start'
+    if not (BIN / 'pg_ctl').is_file():
+        raise SystemExit('PostgreSQL 17 tools required; set ORDERFLOW_PG_BIN or use the existing project installation.')
+    running = DATA.exists() and subprocess.run([str(BIN/'pg_ctl'), '-D', str(DATA), 'status'], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
+    if action == 'stop':
+        if running:
+            run([BIN/'pg_ctl', '-D', DATA, '-w', '-t', '30', '-m', 'fast', 'stop'])
+        return
+    if action not in ('start', 'status'):
+        raise SystemExit('Usage: scripts/platform-db [start|status|stop]')
+    if action == 'status':
+        print('Platform PostgreSQL running.' if running else 'Platform PostgreSQL stopped.')
+        raise SystemExit(0 if running else 1)
+    os.umask(0o077)
+    RUNTIME.mkdir(parents=True, exist_ok=True)
+    secret_file = RUNTIME/'database-secrets.json'
+    if secret_file.exists():
+        credentials = json.loads(secret_file.read_text())
+    else:
+        credentials = {name: secrets.token_hex(24) for name in ('platform_admin', 'order_service', 'inventory_service', 'payment_service')}
+        secret_file.write_text(json.dumps(credentials, indent=2)); secret_file.chmod(0o600)
+    DATA.parent.mkdir(parents=True, exist_ok=True)
+    if not (DATA/'PG_VERSION').exists():
+        password_file = RUNTIME/'postgres/admin-password'
+        password_file.write_text(credentials['platform_admin']+'\n'); password_file.chmod(0o600)
+        run([BIN/'initdb', '-D', DATA, '--username=platform_admin', '--pwfile='+str(password_file), '--auth-local=scram-sha-256', '--auth-host=scram-sha-256', '--encoding=UTF8', '--locale=C'], stdout=subprocess.DEVNULL)
+        with (DATA/'postgresql.conf').open('a') as cfg:
+            cfg.write("\nlisten_addresses = '127.0.0.1'\nport = %d\nunix_socket_directories = ''\n" % PORT)
+    configured_port = int(subprocess.run([str(BIN/'postgres'), '-D', str(DATA), '-C', 'port'], check=True, capture_output=True, text=True).stdout.strip())
+    if configured_port != PORT:
+        raise SystemExit('PLATFORM_PG_PORT differs from this initialized cluster; keep port '+str(configured_port)+'.')
+    if not running:
+        run([BIN/'pg_ctl', '-D', DATA, '-l', RUNTIME/'postgres/server.log', '-w', '-t', '30', 'start'])
+    env = os.environ.copy(); env['PGPASSWORD'] = credentials['platform_admin']; env['PGCONNECT_TIMEOUT'] = '5'; env['PGPASSFILE'] = '/dev/null'
+    common = ['--host=127.0.0.1', '--port='+str(PORT), '--username=platform_admin', '--no-password']
+    def sql(statement, database='postgres', capture=False):
+        result = run([BIN/'psql', '-X', *common, '--dbname='+database, '--set=ON_ERROR_STOP=1', '--tuples-only', '--no-align'], input=statement+'\n', text=True, env=env, stdout=subprocess.PIPE if capture else subprocess.DEVNULL)
+        return result.stdout.strip() if capture else None
+    config_dir = RUNTIME/'config'; config_dir.mkdir(exist_ok=True)
+    for role in ('order_service', 'inventory_service', 'payment_service'):
+        if sql("SELECT 1 FROM pg_roles WHERE rolname = '%s'" % role, capture=True) != '1':
+            sql("CREATE ROLE %s LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOINHERIT PASSWORD '%s'" % (role, credentials[role]))
+        names = [('orderflow_'+role.removesuffix('_service'), False), ('orderflow_'+role.removesuffix('_service')+'_test', True)]
+        for database, test in names:
+            if sql("SELECT 1 FROM pg_database WHERE datname = '%s'" % database, capture=True) != '1':
+                run([BIN/'createdb', *common, '--owner='+role, database], env=env)
+            sql('REVOKE CONNECT ON DATABASE %s FROM PUBLIC; GRANT CONNECT ON DATABASE %s TO %s;' % (database,database,role))
+            suffix = '-test' if test else ''
+            service = role.replace('_','-')
+            path = config_dir/(service+suffix+'.properties')
+            path.write_text('spring.datasource.url=jdbc:postgresql://127.0.0.1:%d/%s?connectTimeout=2&socketTimeout=5&tcpKeepAlive=true\nspring.datasource.username=%s\nspring.datasource.password=%s\n' % (PORT,database,role,credentials[role]))
+            path.chmod(0o600)
+    print('Platform PostgreSQL ready: isolated service databases and test databases on 127.0.0.1:%d.' % PORT)
+    print('Generated connection settings and secrets are under ignored .tools/platform/.')
+
+if __name__ == '__main__':
+    main()

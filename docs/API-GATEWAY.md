@@ -1,5 +1,10 @@
 # Question 1: API gateway with Spring Boot
 
+> Historical lesson: code locations and runtime assumptions below describe the
+> earlier baseline. The current four-service implementation and paths are in
+> [MICROSERVICES-LAB.md](MICROSERVICES-LAB.md); earlier business code is preserved
+> under `legacy-monolith/`, and `gateway/` is now `api-gateway/`.
+
 Prepared for the Capgemini client-round interview, 2026-10-07. This lesson adds a
 small working gateway foundation with production concerns made explicit. It is
 not a production-ready deployment. See the [verification and practice record](labs/INTERVIEW-api-gateway.md)
@@ -55,7 +60,7 @@ the chain for matched gateway routes; it would not alone cover those local cases
 ## 3. Why the gateway has its own application
 
 The existing application under `src/main/java/com/outforpavan/orderflow` uses
-Spring MVC and blocking JPA/JDBC. The new [gateway](../gateway/pom.xml) is an
+Spring MVC and blocking JPA/JDBC. The new [gateway](../api-gateway/pom.xml) is an
 independently built and started Spring Boot application under `gateway/`, with
 reactive WebFlux/Netty and no database dependency. HTTP connects them; the backend
 does not have to become reactive. Do not call JPA, `Thread.sleep`, or `.block()`
@@ -78,12 +83,12 @@ Read these files in order:
 
 | File | What to understand |
 | --- | --- |
-| [gateway/pom.xml](../gateway/pom.xml) | Independent build, Cloud BOM, Gateway WebFlux starter, Actuator, and tests. Root `./dev verify` and gateway verification are separate commands. |
-| [GatewayApplication](../gateway/src/main/java/com/outforpavan/orderflow/gateway/GatewayApplication.java) | A second Boot entry point, started in a second JVM. |
-| [application.yml](../gateway/src/main/resources/application.yml) | Listener, explicit routes, connection/response timeouts, and health exposure. |
-| [RequestIdFilter](../gateway/src/main/java/com/outforpavan/orderflow/gateway/RequestIdFilter.java) | Generate a UUID, replace the incoming header, and register work immediately before response headers are committed. |
-| [GatewayHttpClientConfiguration](../gateway/src/main/java/com/outforpavan/orderflow/gateway/GatewayHttpClientConfiguration.java) | Customize Gateway's existing HTTP client to disable transport retries. |
-| [GatewayConnectionErrorHandler](../gateway/src/main/java/com/outforpavan/orderflow/gateway/GatewayConnectionErrorHandler.java) | Translate connection/DNS exceptions into HTTP 502 before Boot renders its error response. |
+| [gateway/pom.xml](../api-gateway/pom.xml) | Independent build, Cloud BOM, Gateway WebFlux starter, Actuator, and tests. Root `./dev verify` and gateway verification are separate commands. |
+| [GatewayApplication](../api-gateway/src/main/java/com/outforpavan/orderflow/gateway/GatewayApplication.java) | A second Boot entry point, started in a second JVM. |
+| [application.yml](../api-gateway/src/main/resources/application.yml) | Listener, explicit routes, connection/response timeouts, and health exposure. |
+| [RequestIdFilter](../api-gateway/src/main/java/com/outforpavan/orderflow/gateway/RequestIdFilter.java) | Generate a UUID, replace the incoming header, and register work immediately before response headers are committed. |
+| [GatewayHttpClientConfiguration](../api-gateway/src/main/java/com/outforpavan/orderflow/gateway/GatewayHttpClientConfiguration.java) | Customize Gateway's existing HTTP client to disable transport retries. |
+| [GatewayConnectionErrorHandler](../api-gateway/src/main/java/com/outforpavan/orderflow/gateway/GatewayConnectionErrorHandler.java) | Translate connection/DNS exceptions into HTTP 502 before Boot renders its error response. |
 
 The configuration uses the Gateway 5 prefix
 `spring.cloud.gateway.server.webflux`. It declares these route boundaries:

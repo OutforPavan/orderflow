@@ -118,3 +118,13 @@ a time. Demonstrate correctness, recovery, observability, and a safe rollback.
 Then answer unfamiliar follow-up scenarios and defend the design using collected
 evidence. The question tracker and broader requirements must both be complete;
 a working happy path alone does not finish the learning project.
+
+## Requested microservices implementation — 2026-10-07
+
+The learner requested and authorized the [four-service lab](MICROSERVICES-LAB.md),
+including Keycloak, local TLS/mTLS, durable idempotency and Saga, circuit breakers,
+and advisory caching. [Evidence](labs/INTERVIEW-microservices.md) tracks trainer
+checks separately from pending learner practice and explanation. This provides
+implementation material for security, resiliency, distributed workflows and cache
+exercises; it does not complete every scenario in those families. All source IDs
+and completion criteria are preserved; no question is newly marked Covered.

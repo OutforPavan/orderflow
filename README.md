@@ -1,154 +1,142 @@
-# Orderflow
+# Orderflow: practical microservices interview lab
 
-A Java 21 learning project that will grow into an order and inventory backend.
-We start from fundamentals, explain and implement together, and add one concept at a time.
+This Java 21 / Spring Boot 4.1.1 project contains four independently runnable
+applications: an API gateway, OrderService, InventoryService, and PaymentService.
+The gateway routes public APIs. OrderService coordinates a durable checkout Saga.
+Each business service owns a separate PostgreSQL database and database role.
 
-## API gateway interview lesson — 2026-10-07
+The implementation uses real Keycloak user authentication, locally generated
+HTTPS certificates, mutual TLS between services, Resilience4j circuit breakers,
+durable idempotency, and an advisory inventory cache. PaymentProvider is explicitly
+simulated: this lab never charges real money.
 
-The first gateway exercise adds a separate application in `gateway/` that forwards
-product and order requests to the existing backend. See the
-[guided explanation](docs/API-GATEWAY.md), [HTTP requests](requests/gateway.http),
-and [verification record](docs/labs/INTERVIEW-api-gateway.md).
-Run the backend as below, then in another terminal run
-`./dev -f gateway/pom.xml spring-boot:run` and use `http://127.0.0.1:8090`.
-Validate the two applications separately: `./dev verify` and
-`./dev -f gateway/pom.xml verify`. The root build does not include the gateway.
-This is a local, production-oriented routing foundation; authentication, distributed
-rate limiting, and production deployment remain future lessons. Earlier learner
-checkpoints remain open.
+Start with the [walkthrough and practical exercises](docs/MICROSERVICES-LAB.md).
+It explains the code path, authentication versus authorization, HTTPS client
+adapters, Saga recovery, circuit breakers, caching, and the limits of CAP claims.
 
-## Current checkpoint
+```mermaid
+flowchart LR
+    U[Client] -->|Obtain JWT over HTTPS| K[Keycloak :8443]
+    U -->|HTTPS + bearer token| G[API Gateway :8090]
+    G -->|mTLS + forwarded JWT| O[OrderService :8081]
+    G -->|mTLS + forwarded JWT| I[InventoryService :8082]
+    G -->|mTLS + forwarded JWT| P[PaymentService :8083]
+    O -->|mTLS: reserve / release| I
+    O -->|mTLS: payment operation| P
+    O --> OD[(Order database)]
+    I --> ID[(Inventory database)]
+    P --> PD[(Payment database + simulated ledger)]
+```
 
-Day 1 implementation: product REST APIs, validated DTOs, PostgreSQL/Flyway/JPA,
-and transactional order creation. Trainer verification on 2026-09-25 passed all
-43 tests and the packaged HTTP/restart check. The learner created product 1,
-reports that it survived application restart, and shared its subsequent stock-8
-response after an order request. The actual order JSON and remaining drills have
-not yet been reviewed.
+## Repository layout
 
-**Earlier security checkpoint, 2026-09-29:** explain Spring Security authentication and
-authorization for the learner's interview question, using the
-[security guide](docs/SPRING-SECURITY.md). Its code is a prepared reference, not
-installed security. The existing [class walkthrough](docs/CODE-WALKTHROUGH.md) and
-learner checkpoints remain open; working code does not establish understanding.
+```text
+orderflow/
+├── pom.xml                 Maven aggregator; not a running application
+├── api-gateway/            WebFlux / Netty routing and JWT policy
+├── order-service/          MVC / JDBC; durable Saga and HTTPS client adapters
+├── inventory-service/      MVC / JDBC; reservations, stock, advisory cache
+├── payment-service/        MVC / JDBC; payment outcomes and provider simulator
+├── security-support/       Shared JWT and servlet security library; no server
+├── legacy-monolith/        Preserved earlier backend and its tests
+├── config/keycloak/        Realm template without generated user passwords
+├── scripts/                Local setup, lifecycle, certificate and smoke helpers
+└── docs/                   Lessons, implementation records, interview practice
+```
 
-The learner has run the original endpoint and correctly predicted missing-service
-startup failure. See the [Day 1 lesson](docs/lessons/003-day-one-order-flow.md).
+The root build now aggregates the four applications and shared library. The old
+backend is preserved under `legacy-monolith`; its earlier data is not converted
+into the new service databases. The earlier `gateway/` application is now
+`api-gateway/`. Historical lesson commands describe their original checkpoint;
+use the commands below for the current platform.
 
-Current pace: [three days, three hours per day](docs/THREE-DAY-SPRINT.md), organized
-around a narrow end-to-end implementation. Full PDF coverage remains tracked separately.
+## Run locally
 
-- Java 21; Spring Boot 4.1.1; Maven Wrapper.
-- `GET /api/learning/status` returns an externally configured learning message.
-- Product creation/read/price changes and order creation/read use a real PostgreSQL database.
-- Focused MVC checks and database integration tests exercise validation and rollback.
-- Future features are described in the [roadmap](docs/ROADMAP.md).
-
-## Interview pricing slice — 2026-09-28
-
-The explicitly requested [discount and priority-fee implementation](docs/INTERVIEW-PRICING.md)
-adds Java 8-compatible calculation classes to the existing Java 21 app. The learner
-chose fees after discounts. Use [pricing requests](requests/pricing.http) and
-[verification notes](docs/labs/INTERVIEW-pricing.md). This scoped feature request
-does not complete the earlier class walkthrough or any learner checkpoint.
-
-## Run on this machine
+Prerequisites: JDK 21, Python 3.9+, OpenSSL, and the PostgreSQL binaries used by the
+existing project helper. `./dev` uses the project's local Java runtime when it
+exists; otherwise set `JAVA_HOME`. On the original machine the installed runtime
+is `/Users/pavtiwar/orderflow/.tools/java21/Contents/Home`.
 
 ```sh
 cd /Users/pavtiwar/orderflow
-./dev --version
-./scripts/db start
+./scripts/platform setup
 ./dev verify
-./dev spring-boot:run
+./scripts/keycloak start
+./scripts/keycloak status
+./scripts/platform start
+./scripts/platform status
 ```
 
-In a second terminal:
+Allow initial startup to complete before checking status again. Setup downloads
+the pinned Keycloak distribution when needed, starts the local database, creates
+three business databases and three isolated test databases with separate roles,
+and generates private local settings. Keycloak uses an explicit local file database and local cache, with its HTTP
+listener disabled. It is a learning configuration, not an HA identity deployment
+or another business PostgreSQL database.
+
+An existing PostgreSQL installation can be selected through `ORDERFLOW_PG_BIN`;
+the earlier `./scripts/db-setup` helper prepares its pinned distribution on the
+supported Mac environment.
+
+Servers bind to the local machine by default. Settings, keys, tokens, database
+files, and logs live under ignored `.tools/`. A CA certificate is valid for 365
+days; individual app certificates are valid for 90 days. Setup reuses valid
+existing certificates and never changes the operating system trust store.
+
+Use the HTTP guide to make requests, or run the automated lab checks:
 
 ```sh
-curl -i http://localhost:8080/api/learning/status
+./scripts/platform-smoke
+./scripts/platform-smoke --resilience
 ```
 
-Expected status: `200 OK`. Expected JSON:
+The resilience option deliberately stops and restarts selected applications to
+exercise recovery. Run it against this local lab when no other exercise depends
+on those processes. Actual results are recorded with the implementation evidence;
+these commands describe how to reproduce the checks.
 
-```json
-{"application":"orderflow","message":"LearningService - Learning Spring Boot one step at a time"}
+Stop only the project-owned processes:
+
+```sh
+./scripts/platform stop
+./scripts/keycloak stop
 ```
 
-Stop the server with Ctrl+C. If port 8080 is occupied, run
-`./dev spring-boot:run -Dspring-boot.run.arguments=--server.port=8081`
-and use port 8081 in the URL.
+For an individual application, use for example
+`./scripts/platform stop inventory-service` or
+`./scripts/platform start inventory-service`. PostgreSQL remains available until
+you stop it with the database helper, after all dependent applications stop.
 
-Open [requests/day1.http](requests/day1.http) in IntelliJ and run its requests in
-order. Each run of the create-product request gives a new ID. The database helper
-keeps local tools, data, and generated connection settings under ignored `.tools/`.
-Its application and test databases are separate. After stopping the application,
-use `./scripts/db stop` to stop only this project's database.
+## What to explain in the interview
 
-On this machine, PostgreSQL 17.11 is installed locally and ready. On another Mac,
-run `./scripts/db-setup` once to install the pinned, checksum-verified distribution.
-On another supported OS, install PostgreSQL 17 and set `ORDERFLOW_PG_BIN` to its
-binary directory before `./scripts/db start`. The helper creates a local teaching
-cluster whose owner role is a superuser; production role separation is not implemented.
+| Question | Implemented answer |
+|---|---|
+| Why a separate gateway? | Independent runtime and dependencies; it routes API requests and applies edge policies. |
+| Is authentication only at the gateway? | Keycloak signs user tokens. Gateway and public backend APIs validate them; backend code checks ownership. |
+| How do services use HTTPS? | Client adapters use Spring SSL bundles, certificate trust, hostname verification, and separate service identities. |
+| What happens when a dependency fails? | Timeouts bound waiting; circuit breakers reject repeated calls; durable Saga state retains pending work. |
+| How do three databases commit together? | They do not. Local transactions and idempotent compensation implement the checkout workflow. |
+| What is cached? | Availability observations for five seconds; reservation decisions always use locked database rows. |
+| Which CAP behavior is implemented? | Mutations refuse or defer when authoritative storage is unreachable; advisory cached reads can be stale. No replicated CP/AP claim is made. |
 
-After packaging, `python3 scripts/day1-smoke.py` verifies real HTTP behavior,
-configuration overrides, and persistence across an application restart. It uses
-`orderflow_test`, leaves labeled inspection rows, and stops its own app processes.
-
-To see SQL, run `./dev spring-boot:run -Dspring-boot.run.arguments=--spring.profiles.active=sql`.
-To override the lesson message, run
-`./dev spring-boot:run '-Dspring-boot.run.arguments=--learning.message=Configured-from-the-command-line'`.
-Normal file edits take effect after restart in this project.
-
-The `dev` helper selects the project-local Java 21 JDK under
-`.tools/java21/Contents/Home`, then invokes the standard Maven Wrapper.
-It keeps Maven downloads under `.tools/`; these are ignored by Git.
-The project Maven settings use the default public repositories, isolating this
-learning project from machine-wide repository settings.
-This machine uses Eclipse Temurin 21.0.12.1+1 (macOS Apple Silicon), verified
-against the SHA-256 published by Adoptium when downloaded.
-
-On another machine, install JDK 21, set `JAVA_HOME`, prepare PostgreSQL as above,
-and run `./dev verify`
-(macOS/Linux), or use `mvnw.cmd verify` on Windows.
-The first run needs internet access for Maven and dependencies.
-
-In IntelliJ IDEA, open `pom.xml`, choose JDK 21 as the Project SDK and Maven
-runner JRE. On this machine the JDK is at
-`/Users/pavtiwar/orderflow/.tools/java21/Contents/Home`.
-
-## Learn in small steps
-
-1. Walk through the [current classes and configuration](docs/CODE-WALKTHROUGH.md) together before continuing [Day 1 practice](docs/lessons/003-day-one-order-flow.md); revisit [constructor injection](docs/lessons/002-constructor-injection.md) for object wiring.
-2. Run the baseline, predict the exercise outcome, and make the small change.
-3. Review the result together and explain it in your own words.
-4. Run the tests, update the [progress log](docs/PROGRESS.md), and commit/push.
-
-Keep source code, tests, lessons, and design decisions in Git. Credentials,
-local tool installations, IDE state, and generated build output stay outside commits.
+This is a runnable, production-oriented learning implementation, not a production
+deployment. Missing production work includes managed certificate rotation and
+revocation, Keycloak production operations, browser authorization-code/PKCE login,
+real payment reconciliation, distributed rate limiting, and database high
+availability. A circuit breaker or Saga does not supply those guarantees.
 
 ## Learning records
 
-The living notes are maintained alongside each lesson. The completion requirement
-covers every question in the three supplied PDFs plus the broader curriculum;
-each item needs live practice, implementation or diagnostic evidence, and a
-reviewed explanation.
+Working implementation and trainer verification do not establish learner
+understanding. Earlier unanswered checkpoints remain open.
 
-- [Lesson 002 implementation and verification record](docs/labs/B03-001-constructor-injection.md)
-- [Day 1 implementation and verification record](docs/labs/DAY1-order-flow.md)
-- [Every current class and configuration: guided walkthrough](docs/CODE-WALKTHROUGH.md)
-- [Technical notebook: internals and follow-up answers](docs/TECHNICAL-NOTEBOOK.md)
-- [All 95 PDF questions and completion tracker](docs/PDF-COVERAGE.md)
-- [Practical lab catalog](docs/LAB-CATALOG.md)
-- [Roadmap](docs/ROADMAP.md)
-- [Progress](docs/PROGRESS.md)
+- [Current microservices walkthrough](docs/MICROSERVICES-LAB.md)
+- [Inventory behavior and tests](inventory-service/README.md)
+- [Payment simulator and real-provider boundary](payment-service/README.md)
+- [Technical notebook](docs/TECHNICAL-NOTEBOOK.md)
+- [Learning progress](docs/PROGRESS.md)
 - [Interview practice](docs/INTERVIEW-NOTES.md)
-- [Why we start with one application](docs/decisions/0001-start-with-one-application.md)
-
-The aim is to explain mechanisms, diagnose failures, and defend tradeoffs with
-evidence. Completing a checklist alone does not establish interview readiness.
-
-## References
-
-- [Spring Boot system requirements](https://docs.spring.io/spring-boot/system-requirements.html)
-- [Spring Boot first application](https://docs.spring.io/spring-boot/tutorial/first-application/index.html)
-- [Adoptium archive installation](https://adoptium.net/installation/archives)
+- [Question coverage tracker](docs/PDF-COVERAGE.md)
+- [Lab catalog](docs/LAB-CATALOG.md)
+- [Original gateway lesson](docs/API-GATEWAY.md)
+- [Original class walkthrough](docs/CODE-WALKTHROUGH.md)

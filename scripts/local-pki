@@ -1,0 +1,64 @@
+#!/usr/bin/env python3
+"""Create an isolated local CA and per-application certificates. Never modifies OS trust."""
+import os
+from pathlib import Path
+import subprocess
+import tempfile
+
+ROOT = Path(__file__).resolve().parents[1]
+PKI = Path(os.environ.get('PLATFORM_PKI_DIR', ROOT / '.tools/platform/pki')).resolve()
+os.umask(0o077)
+PKI.mkdir(parents=True, exist_ok=True)
+
+def openssl(*args):
+    subprocess.run(['openssl', *map(str, args)], check=True, stdout=subprocess.DEVNULL,
+                   stderr=subprocess.PIPE)
+
+with tempfile.TemporaryDirectory(prefix='pki-', dir=PKI) as work:
+    work = Path(work)
+    ca_config = work / 'ca.cnf'
+    ca_config.write_text('''[req]
+distinguished_name=dn
+x509_extensions=ca
+prompt=no
+[dn]
+CN=Orderflow Local Learning CA
+[ca]
+basicConstraints=critical,CA:true,pathlen:0
+keyUsage=critical,keyCertSign,cRLSign
+subjectKeyIdentifier=hash
+''')
+    if not (PKI / 'ca.crt').exists():
+        if (PKI / 'ca.key').exists():
+            raise SystemExit('Incomplete CA; restore it or select a new PLATFORM_PKI_DIR.')
+        openssl('req', '-new', '-x509', '-newkey', 'rsa:3072', '-nodes', '-days', '365',
+                '-sha256', '-config', ca_config, '-keyout', PKI/'ca.key', '-out', PKI/'ca.crt')
+    for name in ('api-gateway', 'order-service', 'inventory-service', 'payment-service', 'keycloak'):
+        cert, key = PKI/f'{name}.crt', PKI/f'{name}.key'
+        if cert.exists() and key.exists():
+            openssl('verify', '-CAfile', PKI/'ca.crt', cert)
+            continue
+        if cert.exists() or key.exists():
+            raise SystemExit(f'Incomplete certificate pair for {name}; refusing to overwrite it.')
+        config = work/f'{name}.cnf'
+        config.write_text(f'''[req]
+distinguished_name=dn
+prompt=no
+[dn]
+CN={name}
+[leaf]
+basicConstraints=critical,CA:false
+keyUsage=critical,digitalSignature,keyEncipherment
+extendedKeyUsage=serverAuth,clientAuth
+subjectAltName=DNS:localhost,IP:127.0.0.1
+subjectKeyIdentifier=hash
+authorityKeyIdentifier=keyid,issuer
+''')
+        csr = work/f'{name}.csr'
+        openssl('req', '-new', '-newkey', 'rsa:2048', '-nodes', '-sha256', '-config', config,
+                '-keyout', key, '-out', csr)
+        openssl('x509', '-req', '-in', csr, '-CA', PKI/'ca.crt', '-CAkey', PKI/'ca.key',
+                '-set_serial', str(int.from_bytes(os.urandom(16), 'big')), '-days', '90',
+                '-sha256', '-extfile', config, '-extensions', 'leaf', '-out', cert)
+        openssl('verify', '-CAfile', PKI/'ca.crt', cert)
+print(f'Local CA and per-application certificates ready in {PKI}')

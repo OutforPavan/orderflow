@@ -12,7 +12,7 @@ The controller now asks a `LearningService` for the learning message. It still h
 
 A **dependency** is an object another object needs to do its work. **Dependency injection** means supplying that collaborator from outside. Our controller receives its service through its constructor; Spring supplies the argument when creating the controller. [Spring dependency injection](https://docs.spring.io/spring-framework/reference/core/beans/dependencies/factory-collaborators.html)
 
-In [LearningService.java](../../src/main/java/com/outforpavan/orderflow/learning/LearningService.java):
+In [LearningService.java](../../legacy-monolith/src/main/java/com/outforpavan/orderflow/learning/LearningService.java):
 
 ```java
 @Service
@@ -23,7 +23,7 @@ public class LearningService {
 }
 ```
 
-In [LearningController.java](../../src/main/java/com/outforpavan/orderflow/learning/LearningController.java), the relevant parts are:
+In [LearningController.java](../../legacy-monolith/src/main/java/com/outforpavan/orderflow/learning/LearningController.java), the relevant parts are:
 
 ```java
 private final LearningService learningService;

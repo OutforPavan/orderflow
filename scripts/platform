@@ -1,0 +1,94 @@
+#!/usr/bin/env python3
+"""Lifecycle for the four local applications; only signals processes owned by this checkout."""
+import json
+import os
+from pathlib import Path
+import signal
+import ssl
+import subprocess
+import sys
+import time
+import urllib.request
+
+ROOT = Path(__file__).resolve().parents[1]
+TOOLS = ROOT / '.tools/platform'
+RUN = TOOLS / 'run'
+PKI = Path(os.environ.get('PLATFORM_PKI_DIR', TOOLS/'pki')).resolve()
+APPS = {'inventory-service': 8082, 'payment-service': 8083, 'order-service': 8081, 'api-gateway': 8090}
+os.umask(0o077)
+RUN.mkdir(parents=True, exist_ok=True)
+
+def java_home():
+    for value in (str(ROOT / '.tools/java21/Contents/Home'), os.environ.get('JAVA_HOME')):
+        if value and (Path(value) / 'bin/java').exists():
+            version = subprocess.run([str(Path(value)/'bin/java'), '-version'], capture_output=True, text=True)
+            if 'version \"21' in version.stderr:
+                return value
+    raise SystemExit('Set JAVA_HOME to JDK 21 or install the project local JDK.')
+
+def owned_pid(app):
+    path = RUN / (app + '.pid')
+    if not path.exists(): return None
+    pid = int(path.read_text())
+    if pid <= 1: raise SystemExit('Unsafe PID file: ' + str(path))
+    description = subprocess.run(['ps', '-ww', '-p', str(pid), '-o', 'stat=,command='], capture_output=True, text=True).stdout.strip()
+    if not description: return None
+    state, _, command = description.partition(' ')
+    if state.startswith('Z'): return None # Exited child awaiting OS reaping.
+    if str(ROOT / app / 'target' / (app + '-0.0.1-SNAPSHOT.jar')) not in command:
+        raise SystemExit('PID belongs to a different process; refusing to use it: ' + str(path))
+    return pid
+
+def start(app):
+    if owned_pid(app):
+        print(app + ' already running'); return
+    jar = ROOT / app / 'target' / (app + '-0.0.1-SNAPSHOT.jar')
+    if not jar.exists(): raise SystemExit('Run ./dev verify first; missing ' + str(jar))
+    env = dict(os.environ, PLATFORM_CONFIG_DIR=os.environ.get('PLATFORM_CONFIG_DIR', str(TOOLS/'config')), PLATFORM_PKI_DIR=str(PKI))
+    with (RUN/(app+'.log')).open('ab') as log:
+        process = subprocess.Popen([str(Path(java_home())/'bin/java'), '-Xms64m', '-Xmx256m', '-jar', str(jar)],
+            cwd=ROOT, env=env, stdin=subprocess.DEVNULL, stdout=log, stderr=log, start_new_session=True)
+    (RUN/(app+'.pid')).write_text(str(process.pid))
+    print('Started ' + app)
+
+def stop(app):
+    pid = owned_pid(app)
+    if pid:
+        os.kill(pid, signal.SIGTERM)
+        for _ in range(100):
+            if not owned_pid(app): break
+            time.sleep(.1)
+        if owned_pid(app): raise SystemExit(app + ' is still shutting down; retry stop later.')
+    (RUN/(app+'.pid')).unlink(missing_ok=True)
+    print('Stopped ' + app)
+
+def status(app):
+    context = ssl.create_default_context(cafile=str(PKI/'ca.crt'))
+    if app != 'api-gateway':
+        context.load_cert_chain(str(PKI/'api-gateway.crt'), str(PKI/'api-gateway.key'))
+    try:
+        with urllib.request.urlopen('https://localhost:'+str(APPS[app])+'/actuator/health', context=context, timeout=3) as response:
+            healthy = json.load(response).get('status') == 'UP'
+        print(app + (': HTTPS healthy' if healthy else ': not healthy'))
+        return healthy
+    except Exception as error:
+        print(app + ': unavailable (' + type(error).__name__ + ')')
+        return False
+
+command = sys.argv[1] if len(sys.argv)>1 else 'status'
+selected = sys.argv[2:] or list(APPS)
+if any(app not in APPS for app in selected): raise SystemExit('Choose: ' + ', '.join(APPS))
+if command == 'setup':
+    for script in ('local-pki', 'platform-db', 'keycloak-setup'):
+        args = [str(ROOT/'scripts'/script)] + (['start'] if script == 'platform-db' else [])
+        subprocess.run(args, cwd=ROOT, check=True)
+    print('Setup complete. Run ./dev verify, ./scripts/keycloak start, then ./scripts/platform start.')
+elif command == 'start':
+    for app in selected: start(app)
+elif command == 'stop':
+    for app in reversed(selected): stop(app)
+elif command == 'status':
+    results = [status(app) for app in selected]
+    sys.exit(0 if all(results) else 1)
+else:
+    raise SystemExit('Usage: ./scripts/platform setup|start|stop|status [service ...]')

@@ -68,10 +68,10 @@ errors, configuration, migrations, helper scripts, and all test classes.
 | File | Role |
 | --- | --- |
 | [pom.xml](../pom.xml) | Java target, dependency management, web starter, and packaging plugin |
-| [OrderflowApplication](../src/main/java/com/outforpavan/orderflow/OrderflowApplication.java) | Java entry point and application configuration |
-| [LearningController](../src/main/java/com/outforpavan/orderflow/learning/LearningController.java) | GET endpoint and response record |
-| [LearningService](../src/main/java/com/outforpavan/orderflow/learning/LearningService.java) | Constructor-injected message supplier |
-| [LearningControllerTest](../src/test/java/com/outforpavan/orderflow/learning/LearningControllerTest.java) | MVC response-contract checks |
+| [OrderflowApplication](../legacy-monolith/src/main/java/com/outforpavan/orderflow/OrderflowApplication.java) | Java entry point and application configuration |
+| [LearningController](../legacy-monolith/src/main/java/com/outforpavan/orderflow/learning/LearningController.java) | GET endpoint and response record |
+| [LearningService](../legacy-monolith/src/main/java/com/outforpavan/orderflow/learning/LearningService.java) | Constructor-injected message supplier |
+| [LearningControllerTest](../legacy-monolith/src/test/java/com/outforpavan/orderflow/learning/LearningControllerTest.java) | MVC response-contract checks |
 
 <a id="startup"></a>
 
@@ -335,7 +335,7 @@ Accept: application/json
 The application method returns a `LearningStatus` record with `application` and
 `message` fields. It does not parse a TCP connection, search for a route, or write
 JSON bytes itself. Those responsibilities belong to different infrastructure
-components. Follow along in [LearningController.java](../src/main/java/com/outforpavan/orderflow/learning/LearningController.java).
+components. Follow along in [LearningController.java](../legacy-monolith/src/main/java/com/outforpavan/orderflow/learning/LearningController.java).
 
 ### 3.2 Startup discovers routes; requests select a route
 
@@ -1027,9 +1027,9 @@ its explicit flush sends SQL but does not commit. The connection pool is capped
 at five per application instance. There is no installed Redis cache, Kafka,
 distributed deployment, read replica, sharding, or authentication/owner model.
 
-Existing source anchors: [repository](../src/main/java/com/outforpavan/orderflow/product/ProductRepository.java),
-[order service](../src/main/java/com/outforpavan/orderflow/order/OrderService.java),
-[configuration](../src/main/resources/application.properties).
+Existing source anchors: [repository](../legacy-monolith/src/main/java/com/outforpavan/orderflow/product/ProductRepository.java),
+[order service](../legacy-monolith/src/main/java/com/outforpavan/orderflow/order/OrderService.java),
+[configuration](../legacy-monolith/src/main/resources/application.properties).
 
 ### 12.1 CAP: choose behavior during loss of communication
 
@@ -1792,3 +1792,103 @@ and [Saga/local transaction and compensation model](https://learn.microsoft.com/
 
 Next review: when `POST /api/orders` matches the order route, which component
 decides to reserve stock and request payment, and why? Learner answer pending.
+
+## 15. Implemented four-service checkout — 2026-10-07
+
+The learner explicitly resumed implementation and selected Keycloak plus locally
+generated certificates. Section 14's proposal is now implemented in four sibling
+modules. The [current lab guide](MICROSERVICES-LAB.md) contains the complete diagram,
+class paths, runnable commands and interviewer follow-ups. [ADR 0005](decisions/0005-four-services-durable-saga-and-trust.md)
+records the decisions and [verification](labs/INTERVIEW-microservices.md) separates
+trainer checks from learner practice. Earlier source paths refer to the preserved
+`legacy-monolith/`; gateway source is now `api-gateway/`.
+
+### 15.1 Where authentication and authorization belong
+
+Keycloak authenticates the human and issues a signed JWT. Gateway validates the
+signature, issuer, expiration, audience and allowed roles before routing. Services
+repeat validation because their data and permissions are their responsibility.
+`TokenPolicy` shares claim policy; servlet `ServiceSecurityConfiguration` and
+reactive `GatewaySecurityConfiguration` install the framework-specific chains.
+The OrderController reads `sub` from the JWT; it never accepts a customerId from
+request JSON. OrderStore checks that owner; PaymentService does the equivalent
+for payment status. An authenticated customer receives 403 for an admin operation
+and 404 when reading another customer's order/payment.
+
+TLS encrypts transport and verifies the server. mTLS additionally authenticates the
+calling workload's certificate. A separate security chain for `/internal/**` accepts
+only the `order-service` certificate CN. A customer/admin JWT cannot become that
+service identity. Conversely, a service certificate does not grant access to public
+user endpoints without a JWT. Certificates and tokens solve different identity
+problems; neither replaces authorization.
+
+### 15.2 Code path, state and transactions
+
+`POST /api/orders` -> Gateway route -> OrderController -> OrderStore.create commits
+an order, customer-scoped idempotency key and fingerprint -> 202 with a status URL.
+SagaScheduler calls SagaWorker.processOnce -> OrderStore.claim -> InventoryClient
+HTTPS reserve -> reservation transaction -> OrderStore.reserved -> PaymentClient
+HTTPS payment -> payment transaction -> OrderStore.advance CONFIRMED.
+
+On definite decline: PAYMENT_PENDING -> RELEASE_PENDING -> idempotent inventory
+release -> CANCELLED. Insufficient stock: RESERVE_PENDING -> REJECTED. Unknown
+transport outcome: retain current step and retry the same order UUID. A lost payment
+response is not evidence of failure. Store the attempt/backoff in PostgreSQL so a
+restart does not erase pending work. An expired lease allows a new worker to recover;
+conditional lease-owner writes prevent the old worker from overwriting the new one.
+
+Every database transaction is local and short. A participant may commit before the
+coordinator hears the response or writes its next state. That is why participant
+idempotency is mandatory even with a lease: a lease cannot guarantee only one HTTP
+request is in flight. The implementation provides idempotent effects under retries,
+not exactly-once delivery and not a distributed ACID transaction.
+
+### 15.3 Circuit breaker, cache and CAP
+
+`HttpsClientsConfiguration` wraps the InventoryClient and PaymentClient adapters
+in distinct Resilience4j breakers. Four calls form the small lab window; at least
+four calls and a 50% failure rate open a circuit, five seconds permits half-open
+probes, and two successful probes close it. Connect timeout is one second and read
+timeout two seconds. Breaker state is local memory; Saga progress is durable.
+A process restart resets the circuit, not the business transaction. HTTP business
+rejections are not dependency failures; successful JSON DECLINED is a normal response.
+
+Caffeine bounds availability entries to 1,000 and expires them after five seconds.
+`observedAt` and `cached` describe the display response. Inventory reservations use
+row locks and database constraints, never cached stock. After-commit invalidation
+prevents publishing a rolled-back mutation as a successful cache update; cache
+correctness is not required for the stock invariant. Replicas can have different
+cache values until expiration.
+
+CAP consistency is about a single, up-to-date operation history under partition;
+ACID consistency concerns transaction invariants. They are not interchangeable.
+Authoritative writes fail/defer during loss of required storage or participant.
+Advisory cache hits can serve stale data briefly. Saga convergence is eventual across
+services. The single-node lab does not implement replicated consensus, prove linearizability
+of the whole product, or earn a blanket CP/AP label. See the guide's primary sources.
+
+### 15.4 Follow-up questions and reference answers
+
+- Why outside `src/`? Four independently packaged applications each need their own
+  `src/main`, dependencies, config and main class; root is their build aggregator.
+- Why not put checkout in Gateway? Routing/security are edge concerns; durable
+  ordering, compensation and ownership belong to OrderService's business boundary.
+- Why no shared entities or cross-service SQL? Each service owns its schema and
+  publishes an HTTP contract. The shared library contains security policy only.
+- Can a timeout release stock? Only after a definitive declined/cancelled outcome;
+  payment may already have succeeded. Retain the pending step and reconcile/retry.
+- Is compensation rollback? No. It is another committed business operation that
+  can fail; its progress and retries must also be persisted.
+- Is payment production ready? No real provider is connected. The simulated debit
+  and payment record are atomic within one database. A real provider needs external
+  idempotency, reconciliation, webhooks, provider-specific states and operational review.
+- What happens when Keycloak goes down? Previously cached signing keys can validate
+  unexpired tokens locally; login/refresh and unknown-key resolution depend on Keycloak.
+  Validation never bypasses trust on failure. Token revocation is not instantaneous
+  for already issued self-contained JWTs; use short lifetimes and appropriate policy.
+- What about scale? Replicas can compete for leased Saga rows safely; circuit state
+  and cache remain per instance. DNS/discovery, load balancing, connection budgets,
+  observability, managed secrets/PKI and tested HA are further deployment work.
+
+Reference answers above are prepared teaching material. Learner practice and
+reviewed explanations for this implementation remain pending.

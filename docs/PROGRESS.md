@@ -2,22 +2,20 @@
 
 ## Current focus — 2026-10-07
 
-The learner explicitly requested API gateway explanation and implementation for
-the Capgemini client round. This narrowly resumes feature work for that topic;
-the earlier class walkthrough and security choice remain open.
+The learner explicitly requested implementation of four Spring Boot applications,
+Keycloak authentication/authorization, locally generated HTTPS certificates,
+service client adapters, circuit breakers, a durable Saga, caching and CAP tradeoffs.
+This resumes feature work for that scope. Earlier walkthrough checkpoints remain open.
 
-- Prepared a separate reactive gateway with explicit product/order routes,
-  UUID request IDs, connection/response timeouts, transport retry disabled, and
-  limited health exposure. Backend MVC/JPA code remains the business boundary.
-- [Gateway lesson](API-GATEWAY.md) and
-  [verification record](labs/INTERVIEW-api-gateway.md) track the actual checks.
-- Learner correctly predicted that a timed-out order request must not be blindly
-  retried: "No—first check the outcome or use an idempotency key". Reviewed as
-  correct: a timeout does not prove rollback; durable idempotency belongs at the
-  order transaction boundary. No idempotency feature is installed by this lesson.
-- Live learner requests and route/filter explanation remain pending. No study
-  duration is inferred. Full completion remains 0/95 PDF items and 0/14 broader
-  requirements. This exercise is part of EXT11 (R01/X02), not full completion.
+- Current code: sibling api-gateway, order-service, inventory-service, payment-service
+  modules plus the non-executable security-support library. The earlier application
+  is preserved in legacy-monolith; its database and historical records remain separate.
+- See [current walkthrough](MICROSERVICES-LAB.md), [decision](decisions/0005-four-services-durable-saga-and-trust.md),
+  and [implementation evidence](labs/INTERVIEW-microservices.md).
+- Learner correctly predicted that an uncertain order POST should first be checked
+  or retried with an idempotency key. The new implementation now stores those keys.
+- Live learner practice and full explanations remain pending. No study duration is
+  inferred. Completion remains 0/95 PDF items and 0/14 broader requirements.
 
 ## Earlier position and pending checkpoints
 

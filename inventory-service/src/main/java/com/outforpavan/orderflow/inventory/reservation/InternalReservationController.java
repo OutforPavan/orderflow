@@ -1,0 +1,35 @@
+package com.outforpavan.orderflow.inventory.reservation;
+
+import jakarta.validation.Valid;
+import java.util.UUID;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+@RequestMapping("/internal/reservations")
+public class InternalReservationController {
+    private final ReservationService reservations;
+
+    public InternalReservationController(ReservationService reservations) {
+        this.reservations = reservations;
+    }
+
+    @PostMapping
+    public Reservation reserve(@Valid @RequestBody ReservationRequest request) {
+        return reservations.reserve(request);
+    }
+
+    @PostMapping("/{orderId}/release")
+    public Reservation release(@PathVariable UUID orderId) {
+        return reservations.release(orderId);
+    }
+
+    @GetMapping("/{orderId}")
+    public Reservation get(@PathVariable UUID orderId) {
+        return reservations.get(orderId);
+    }
+}

@@ -1866,3 +1866,13 @@ The learner explicitly requested implementation of product discounts and paid pr
 See [pricing walkthrough](INTERVIEW-PRICING.md) and [design decision](decisions/0003-order-pricing-snapshots.md). Java 8 compatibility applies to the five dependency-free pricing/demo classes; the application remains Java 21 / Boot 4. Paid service choice is not verified membership. Broader security/distributed-system topics are prepared reference material, not completed implementations or learner-demonstrated skills.
 
 Verification is recorded in [pricing evidence](labs/INTERVIEW-pricing.md). No PDF item or broader curriculum requirement is marked Covered by this preparation; learner practice and reviewed answers remain pending. Actual learner study time is not measured.
+
+## Requested microservices implementation — 2026-10-07
+
+The learner requested and authorized the [four-service lab](MICROSERVICES-LAB.md),
+including Keycloak, local TLS/mTLS, durable idempotency and Saga, circuit breakers,
+and advisory caching. [Evidence](labs/INTERVIEW-microservices.md) tracks trainer
+checks separately from pending learner practice and explanation. This provides
+implementation material for security, resiliency, distributed workflows and cache
+exercises; it does not complete every scenario in those families. All source IDs
+and completion criteria are preserved; no question is newly marked Covered.

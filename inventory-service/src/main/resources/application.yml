@@ -1,0 +1,43 @@
+server:
+  address: ${INVENTORY_ADDRESS:127.0.0.1}
+  port: 8082
+  ssl:
+    bundle: server
+    client-auth: need
+  error:
+    include-message: never
+    include-stacktrace: never
+
+spring:
+  application:
+    name: inventory-service
+  config:
+    import: optional:file:${PLATFORM_CONFIG_DIR:.tools/platform/config}/inventory-service.properties
+  datasource:
+    hikari:
+      maximum-pool-size: 10
+      connection-timeout: 2000
+  ssl:
+    bundle:
+      pem:
+        server:
+          keystore:
+            certificate: ${PLATFORM_PKI_DIR:${platform.root:.}/.tools/platform/pki}/inventory-service.crt
+            private-key: ${PLATFORM_PKI_DIR:${platform.root:.}/.tools/platform/pki}/inventory-service.key
+          truststore:
+            certificate: ${PLATFORM_PKI_DIR:${platform.root:.}/.tools/platform/pki}/ca.crt
+        client:
+          keystore:
+            certificate: ${PLATFORM_PKI_DIR:${platform.root:.}/.tools/platform/pki}/inventory-service.crt
+            private-key: ${PLATFORM_PKI_DIR:${platform.root:.}/.tools/platform/pki}/inventory-service.key
+          truststore:
+            certificate: ${PLATFORM_PKI_DIR:${platform.root:.}/.tools/platform/pki}/ca.crt
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never

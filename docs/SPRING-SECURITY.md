@@ -1,5 +1,10 @@
 # Spring Security: explain the mechanism, then implement Orderflow access rules
 
+> Historical lesson: code locations and runtime assumptions below describe the
+> earlier baseline. The current four-service implementation and paths are in
+> [MICROSERVICES-LAB.md](MICROSERVICES-LAB.md); earlier business code is preserved
+> under `legacy-monolith/`, and `gateway/` is now `api-gateway/`.
+
 Prepared 2026-09-29 for the learner's interview question. Baseline: Java 21,
 Spring Boot 4.1.1, project commit `fe874e3`. Boot's dependency management selects
 Spring Security 7.1.1. Use bean configuration and the lambda DSL; old examples

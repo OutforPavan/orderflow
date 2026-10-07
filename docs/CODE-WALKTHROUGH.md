@@ -1,5 +1,10 @@
 # Understand the current code before adding more
 
+> Historical lesson: code locations and runtime assumptions below describe the
+> earlier baseline. The current four-service implementation and paths are in
+> [MICROSERVICES-LAB.md](MICROSERVICES-LAB.md); earlier business code is preserved
+> under `legacy-monolith/`, and `gateway/` is now `api-gateway/`.
+
 Prepared on 2026-09-26 against the Day 1 implementation (`fa1d4df`). This is a
 guided reference, not a record of completed learner understanding. New feature
 implementation is paused at the learner's request. Read the files alongside this
@@ -63,7 +68,7 @@ the entity directly.
 
 ### `OrderflowApplication` — start the application
 
-Open [OrderflowApplication.java](../src/main/java/com/outforpavan/orderflow/OrderflowApplication.java).
+Open [OrderflowApplication.java](../legacy-monolith/src/main/java/com/outforpavan/orderflow/OrderflowApplication.java).
 
 - The JVM calls `main`. `SpringApplication.run(...)` bootstraps Spring Boot.
 - `@SpringBootApplication` combines application configuration, component scanning,
@@ -83,7 +88,7 @@ See the [Boot annotation reference](https://docs.spring.io/spring-boot/reference
 
 ### `LearningProperties` — hold a configured value
 
-Open [LearningProperties.java](../src/main/java/com/outforpavan/orderflow/learning/LearningProperties.java).
+Open [LearningProperties.java](../legacy-monolith/src/main/java/com/outforpavan/orderflow/learning/LearningProperties.java).
 
 `@ConfigurationProperties("learning")` binds `learning.message` to the record's
 `message` component. `@Validated` and `@NotBlank` reject a blank required message
@@ -93,7 +98,7 @@ and response records, which are not Spring beans.
 
 ### `LearningService` — supply the message
 
-Open [LearningService.java](../src/main/java/com/outforpavan/orderflow/learning/LearningService.java).
+Open [LearningService.java](../legacy-monolith/src/main/java/com/outforpavan/orderflow/learning/LearningService.java).
 
 `@Service` registers our application logic with component scanning. Its constructor
 requires `LearningProperties`; Spring supplies that object. `message()` reads the
@@ -102,7 +107,7 @@ by the product and order services, without a database operation.
 
 ### `LearningController` and its nested `LearningStatus` — expose the message
 
-Open [LearningController.java](../src/main/java/com/outforpavan/orderflow/learning/LearningController.java).
+Open [LearningController.java](../legacy-monolith/src/main/java/com/outforpavan/orderflow/learning/LearningController.java).
 
 Spring injects `LearningService`. `@RestController` identifies an HTTP controller
 whose method return values are written to the response body. `@GetMapping` maps
@@ -121,7 +126,7 @@ and what callers may receive. Similar fields do not mean identical responsibilit
 
 ### `CreateProductRequest` — accepted input
 
-Open [CreateProductRequest.java](../src/main/java/com/outforpavan/orderflow/product/CreateProductRequest.java).
+Open [CreateProductRequest.java](../legacy-monolith/src/main/java/com/outforpavan/orderflow/product/CreateProductRequest.java).
 
 This record accepts `name`, `price`, and `stock`. It does not accept a creation ID;
 the database generates that. A Java record supplies a constructor, component
@@ -142,7 +147,7 @@ with `new` alone does not automatically enforce those annotations.
 
 ### `ProductController` — translate HTTP into an application call
 
-Open [ProductController.java](../src/main/java/com/outforpavan/orderflow/product/ProductController.java).
+Open [ProductController.java](../legacy-monolith/src/main/java/com/outforpavan/orderflow/product/ProductController.java).
 
 The constructor stores a `ProductService` supplied by Spring. The `final` field
 cannot later be reassigned; this alone does not prove thread safety.
@@ -166,7 +171,7 @@ See [Spring MVC request-body handling](https://docs.spring.io/spring-framework/r
 
 ### `ProductService` — coordinate product operations
 
-Open [ProductService.java](../src/main/java/com/outforpavan/orderflow/product/ProductService.java).
+Open [ProductService.java](../legacy-monolith/src/main/java/com/outforpavan/orderflow/product/ProductService.java).
 
 - `create`: construct a `Product`, save it through the repository, and copy its
   fields into `ProductResponse`.
@@ -188,7 +193,7 @@ against writes. A single constructor requires no `@Autowired` here.
 
 ### `Product` — persistent data plus product rules
 
-Open [Product.java](../src/main/java/com/outforpavan/orderflow/product/Product.java).
+Open [Product.java](../legacy-monolith/src/main/java/com/outforpavan/orderflow/product/Product.java).
 
 `@Entity` marks a persistence mapping and `@Table(name = "products")` names its
 table. `@Id` identifies the key. `@GeneratedValue(strategy = IDENTITY)` uses the
@@ -215,7 +220,7 @@ UPDATE. That mechanism is **dirty checking**, explaining the missing second
 
 ### `ProductRepository` — request persistence operations
 
-Open [ProductRepository.java](../src/main/java/com/outforpavan/orderflow/product/ProductRepository.java).
+Open [ProductRepository.java](../legacy-monolith/src/main/java/com/outforpavan/orderflow/product/ProductRepository.java).
 
 ```java
 public interface ProductRepository extends JpaRepository<Product, Long> {
@@ -241,7 +246,7 @@ The underlying responsibilities are distinct:
 
 ### `ProductResponse` — selected output fields
 
-Open [ProductResponse.java](../src/main/java/com/outforpavan/orderflow/product/ProductResponse.java).
+Open [ProductResponse.java](../legacy-monolith/src/main/java/com/outforpavan/orderflow/product/ProductResponse.java).
 
 This record holds `id`, `name`, `price`, and `stock` for JSON output. Its static
 `from(Product)` method is code we wrote to copy fields into a new record. There
@@ -250,7 +255,7 @@ change storage details without automatically changing the HTTP contract.
 
 ### `UpdateProductPriceRequest` — input for one specific change
 
-Open [UpdateProductPriceRequest.java](../src/main/java/com/outforpavan/orderflow/product/UpdateProductPriceRequest.java).
+Open [UpdateProductPriceRequest.java](../legacy-monolith/src/main/java/com/outforpavan/orderflow/product/UpdateProductPriceRequest.java).
 
 This record accepts only `price`, with the same required, positive, and decimal
 precision constraints as creation. It states what this PATCH operation changes;
@@ -260,7 +265,7 @@ we do not reuse the create request and accidentally require name and stock again
 
 ### `CreateOrderRequest` — identify the product and requested units
 
-Open [CreateOrderRequest.java](../src/main/java/com/outforpavan/orderflow/order/CreateOrderRequest.java).
+Open [CreateOrderRequest.java](../legacy-monolith/src/main/java/com/outforpavan/orderflow/order/CreateOrderRequest.java).
 
 The record contains required positive `productId` and `quantity`. Input uses
 wrapper types so missing values can be detected. The caller does not choose the
@@ -268,7 +273,7 @@ trusted order price or total; our service reads the product price.
 
 ### `OrderController` — expose create/read routes
 
-Open [OrderController.java](../src/main/java/com/outforpavan/orderflow/order/OrderController.java).
+Open [OrderController.java](../legacy-monolith/src/main/java/com/outforpavan/orderflow/order/OrderController.java).
 
 Spring injects `OrderService`. POST `/api/orders` converts and validates the request,
 calls the service, then returns `201`, `Location: /api/orders/{id}`, and the order
@@ -277,7 +282,7 @@ as the product controller, applied to another resource.
 
 ### `OrderService` — own the complete operation
 
-Open [OrderService.java](../src/main/java/com/outforpavan/orderflow/order/OrderService.java).
+Open [OrderService.java](../legacy-monolith/src/main/java/com/outforpavan/orderflow/order/OrderService.java).
 
 Two constructor dependencies are needed: `ProductRepository` to find and change
 stock, and `OrderRepository` to store the resulting order. Follow `create` in order:
@@ -303,7 +308,7 @@ span multiple repository calls; see [Spring Data transaction guidance](https://d
 
 ### `PurchaseOrder` — retain the facts of one purchase
 
-Open [PurchaseOrder.java](../src/main/java/com/outforpavan/orderflow/order/PurchaseOrder.java).
+Open [PurchaseOrder.java](../legacy-monolith/src/main/java/com/outforpavan/orderflow/order/PurchaseOrder.java).
 
 This entity maps to `purchase_orders`. Its fields are generated `id`, `productId`,
 `quantity`, `unitPrice`, `total`, and `createdAt`. The public constructor calculates
@@ -316,14 +321,14 @@ a database foreign key; we have not introduced a JPA `@ManyToOne` relationship.
 
 ### `OrderRepository` — persist and retrieve orders
 
-Open [OrderRepository.java](../src/main/java/com/outforpavan/orderflow/order/OrderRepository.java).
+Open [OrderRepository.java](../legacy-monolith/src/main/java/com/outforpavan/orderflow/order/OrderRepository.java).
 
 It extends `JpaRepository<PurchaseOrder, Long>`. Spring Data supplies the bean just
 as for products. `OrderService` uses `saveAndFlush` and `findById`.
 
 ### `OrderResponse` — the purchase shown to the caller
 
-Open [OrderResponse.java](../src/main/java/com/outforpavan/orderflow/order/OrderResponse.java).
+Open [OrderResponse.java](../legacy-monolith/src/main/java/com/outforpavan/orderflow/order/OrderResponse.java).
 
 The record carries the order's ID, product ID, quantity, captured unit price, total,
 and creation time. `from(PurchaseOrder)` copies those values. Product stock is not
@@ -334,9 +339,9 @@ this is an illustration, not a claim about order JSON supplied by the learner.
 
 | Type | Purpose and caller |
 | --- | --- |
-| [ResourceNotFoundException](../src/main/java/com/outforpavan/orderflow/api/ResourceNotFoundException.java) | A runtime exception created by services when a requested product or order does not exist. It carries the message; it does not write HTTP itself. |
-| [InsufficientStockException](../src/main/java/com/outforpavan/orderflow/api/InsufficientStockException.java) | A runtime exception created by `Product.reserve` when requested units exceed available stock. Its message includes product ID, requested units, and available units. |
-| [ApiExceptionHandler](../src/main/java/com/outforpavan/orderflow/api/ApiExceptionHandler.java) | A shared `@RestControllerAdvice` bean invoked by MVC error handling. Extends `ResponseEntityExceptionHandler` to customize common request errors. |
+| [ResourceNotFoundException](../legacy-monolith/src/main/java/com/outforpavan/orderflow/api/ResourceNotFoundException.java) | A runtime exception created by services when a requested product or order does not exist. It carries the message; it does not write HTTP itself. |
+| [InsufficientStockException](../legacy-monolith/src/main/java/com/outforpavan/orderflow/api/InsufficientStockException.java) | A runtime exception created by `Product.reserve` when requested units exceed available stock. Its message includes product ID, requested units, and available units. |
+| [ApiExceptionHandler](../legacy-monolith/src/main/java/com/outforpavan/orderflow/api/ApiExceptionHandler.java) | A shared `@RestControllerAdvice` bean invoked by MVC error handling. Extends `ResponseEntityExceptionHandler` to customize common request errors. |
 | `ApiExceptionHandler.FieldError` | A nested record created by the handler for a validation error's `field` and `message`. It does not include the rejected input value. |
 
 The handler maps missing resources to **404**, insufficient stock to **409**, and
@@ -370,7 +375,7 @@ ID, the service loads the product, and a response record supplies the JSON field
 
 ## 8. Every application configuration entry
 
-Open [application.properties](../src/main/resources/application.properties).
+Open [application.properties](../legacy-monolith/src/main/resources/application.properties).
 
 | Setting | What it does and why it exists |
 | --- | --- |
@@ -391,12 +396,12 @@ The generated, ignored `.tools/database.properties` holds
 `spring.datasource.password`. Do not copy its password into notes or Git.
 The local helper uses `127.0.0.1:54329` and database `orderflow`.
 
-Open [application-sql.properties](../src/main/resources/application-sql.properties).
+Open [application-sql.properties](../legacy-monolith/src/main/resources/application-sql.properties).
 When the `sql` profile is active, `logging.level.org.hibernate.SQL=DEBUG` displays
 SQL statement text, and `spring.jpa.properties.hibernate.format_sql=true` formats
 it. These entries do not enable bound-parameter-value logging or change business rules.
 
-Open [application-test.properties](../src/test/resources/application-test.properties).
+Open [application-test.properties](../legacy-monolith/src/test/resources/application-test.properties).
 The `test` profile imports `file:.tools/test-database.properties`, without `optional:`.
 Missing test settings fail startup. That generated file uses the separate
 `orderflow_test` database on the same local server. The integration test also
@@ -408,7 +413,7 @@ command-line values can override both; see [Boot external configuration](https:/
 
 ## 9. The database migration creates the schema
 
-Open [V1__products_and_orders.sql](../src/main/resources/db/migration/V1__products_and_orders.sql).
+Open [V1__products_and_orders.sql](../legacy-monolith/src/main/resources/db/migration/V1__products_and_orders.sql).
 
 Flyway runs versioned migrations during application startup. `V1` is the version;
 the double underscore separates version and description. Flyway records applied
@@ -483,14 +488,14 @@ its particular assertions under its setup, not every production guarantee.
 
 | Test class | Setup and purpose |
 | --- | --- |
-| [OrderflowApplicationTests](../src/test/java/com/outforpavan/orderflow/OrderflowApplicationTests.java) | `@SpringBootTest`, `test` profile: the full context starts with the configured database infrastructure. |
-| [LearningControllerTest](../src/test/java/com/outforpavan/orderflow/learning/LearningControllerTest.java) | Focused MVC test with the real learning service imported: route, HTTP status, and message JSON. |
-| [LearningConfigurationTest](../src/test/java/com/outforpavan/orderflow/learning/LearningConfigurationTest.java) | Small `ApplicationContextRunner`: property binding reaches the service; a blank message fails startup. Its nested `TestConfiguration` enables `LearningProperties` and imports `LearningService` only for this test setup. |
-| [LearningDependencyInjectionTest](../src/test/java/com/outforpavan/orderflow/learning/LearningDependencyInjectionTest.java) | Registers the controller without its required service and asserts the expected startup failure. An expected failure makes this test pass. |
-| [ProductTest](../src/test/java/com/outforpavan/orderflow/product/ProductTest.java) | Plain Java checks for reservation rules. No Spring or database is needed. |
-| [ProductControllerTest](../src/test/java/com/outforpavan/orderflow/product/ProductControllerTest.java) | MVC binding, validation, status, headers, and errors. `ProductService` is mocked, so this does not prove database persistence. |
-| [OrderControllerTest](../src/test/java/com/outforpavan/orderflow/order/OrderControllerTest.java) | MVC order contracts and error handling with a mocked `OrderService`. The supplied mock response does not prove real price calculation. |
-| [OrderFlowIntegrationTest](../src/test/java/com/outforpavan/orderflow/OrderFlowIntegrationTest.java) | Real PostgreSQL and service transactions: order/stock commit, insufficient stock, dirty checking and historical price, rollback after executed stock SQL. |
+| [OrderflowApplicationTests](../legacy-monolith/src/test/java/com/outforpavan/orderflow/OrderflowApplicationTests.java) | `@SpringBootTest`, `test` profile: the full context starts with the configured database infrastructure. |
+| [LearningControllerTest](../legacy-monolith/src/test/java/com/outforpavan/orderflow/learning/LearningControllerTest.java) | Focused MVC test with the real learning service imported: route, HTTP status, and message JSON. |
+| [LearningConfigurationTest](../legacy-monolith/src/test/java/com/outforpavan/orderflow/learning/LearningConfigurationTest.java) | Small `ApplicationContextRunner`: property binding reaches the service; a blank message fails startup. Its nested `TestConfiguration` enables `LearningProperties` and imports `LearningService` only for this test setup. |
+| [LearningDependencyInjectionTest](../legacy-monolith/src/test/java/com/outforpavan/orderflow/learning/LearningDependencyInjectionTest.java) | Registers the controller without its required service and asserts the expected startup failure. An expected failure makes this test pass. |
+| [ProductTest](../legacy-monolith/src/test/java/com/outforpavan/orderflow/product/ProductTest.java) | Plain Java checks for reservation rules. No Spring or database is needed. |
+| [ProductControllerTest](../legacy-monolith/src/test/java/com/outforpavan/orderflow/product/ProductControllerTest.java) | MVC binding, validation, status, headers, and errors. `ProductService` is mocked, so this does not prove database persistence. |
+| [OrderControllerTest](../legacy-monolith/src/test/java/com/outforpavan/orderflow/order/OrderControllerTest.java) | MVC order contracts and error handling with a mocked `OrderService`. The supplied mock response does not prove real price calculation. |
+| [OrderFlowIntegrationTest](../legacy-monolith/src/test/java/com/outforpavan/orderflow/OrderFlowIntegrationTest.java) | Real PostgreSQL and service transactions: order/stock commit, insufficient stock, dirty checking and historical price, rollback after executed stock SQL. |
 
 `@WebMvcTest` loads a focused web slice. `MockMvc` exercises MVC without opening a
 listening HTTP server. `@MockitoBean` replaces a collaborator with controlled test

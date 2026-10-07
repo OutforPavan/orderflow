@@ -1,0 +1,251 @@
+#!/usr/bin/env python3
+"""Exercise the local HTTPS platform with real Keycloak tokens and isolated fixture data.
+
+--resilience briefly stops local participants, tests recovery, and restores them in finally.
+The run creates uniquely named products/orders; it never deletes or resets existing data.
+"""
+import argparse
+import json
+import os
+from pathlib import Path
+import socket
+import ssl
+import subprocess
+import time
+import urllib.error
+import urllib.request
+import uuid
+
+ROOT = Path(__file__).resolve().parents[1]
+PKI = Path(os.environ.get('PLATFORM_PKI_DIR', ROOT/'.tools/platform/pki')).resolve()
+STATE = ROOT/'.tools/platform/smoke'
+EDGE = 'https://localhost:8090'
+PORTS = {'api-gateway':8090, 'order-service':8081, 'inventory-service':8082, 'payment-service':8083}
+TOKENS = {}
+CHECKS = 0
+os.umask(0o077)
+STATE.mkdir(parents=True, exist_ok=True)
+
+def tls(identity=None):
+    context = ssl.create_default_context(cafile=str(PKI/'ca.crt'))
+    if identity:
+        context.load_cert_chain(str(PKI/f'{identity}.crt'), str(PKI/f'{identity}.key'))
+    return context
+
+PUBLIC_TLS, ORDER_TLS, GATEWAY_TLS = tls(), tls('order-service'), tls('api-gateway')
+
+def token(user):
+    if user not in TOKENS or time.monotonic()-TOKENS[user][0] > 200:
+        file = STATE/f'{user}.token'
+        subprocess.run([str(ROOT/'scripts/keycloak'), 'token', user, str(file)],
+                       check=True, stdout=subprocess.DEVNULL)
+        TOKENS[user] = time.monotonic(), file.read_text().strip()
+    return TOKENS[user][1]
+
+def request(method, path, *, user='alice', body=None, key=None, base=EDGE,
+            context=PUBLIC_TLS, headers=None, expect=200):
+    supplied = dict(headers or {})
+    if user:
+        supplied['Authorization'] = 'Bearer '+token(user)
+    if key:
+        supplied['Idempotency-Key'] = key
+    data = None if body is None else json.dumps(body).encode()
+    if data is not None:
+        supplied['Content-Type'] = 'application/json'
+    req = urllib.request.Request(base+path, data=data, headers=supplied, method=method)
+    try:
+        with urllib.request.urlopen(req, context=context, timeout=8) as response:
+            code, raw = response.status, response.read()
+    except urllib.error.HTTPError as response:
+        code, raw = response.code, response.read()
+    if code != expect:
+        raise AssertionError(f'{method} {path}: expected {expect}, received {code}: {raw[:350]!r}')
+    return json.loads(raw) if raw else None
+
+def check(description):
+    global CHECKS
+    CHECKS += 1
+    print('PASS '+description, flush=True)
+
+def wait_until(description, probe, timeout=60):
+    deadline = time.monotonic()+timeout
+    latest = None
+    while time.monotonic() < deadline:
+        latest = probe()
+        if latest:
+            return latest
+        time.sleep(0.3)
+    raise AssertionError(f'Timed out waiting for {description}; last result={latest!r}')
+
+def create(product_id, quantity=1, payment='demo-approved', key=None):
+    payload = {'productId': product_id, 'quantity': quantity, 'paymentMethodReference':payment}
+    result = request('POST', '/api/orders', body=payload, key=key or str(uuid.uuid4()), expect=202)
+    return result, payload
+
+def order_in(order_id, states, timeout=60):
+    def probe():
+        order = request('GET', '/api/orders/'+order_id)
+        if order['state'] in {'REVIEW_REQUIRED', 'REJECTED', 'CANCELLED'} and order['state'] not in states:
+            raise AssertionError(f'Unexpected terminal outcome: {order}')
+        return order if order['state'] in states else None
+    return wait_until('order state '+','.join(states), probe, timeout)
+
+def service(action, name):
+    subprocess.run([str(ROOT/'scripts/platform'), action, name], check=True, stdout=subprocess.DEVNULL)
+
+def healthy(name):
+    try:
+        return request('GET', '/actuator/health', user=None,
+                       base='https://localhost:'+str(PORTS[name]),
+                       context=PUBLIC_TLS if name == 'api-gateway' else ORDER_TLS)['status'] == 'UP'
+    except (urllib.error.URLError, AssertionError, OSError):
+        return False
+
+def keycloak_ready():
+    try:
+        data = request('GET', '/realms/orderflow/.well-known/openid-configuration', user=None,
+                       base='https://localhost:8443')
+        return data.get('issuer') == 'https://localhost:8443/realms/orderflow'
+    except (urllib.error.URLError, AssertionError, OSError):
+        return False
+
+def basic():
+    wait_until('Keycloak HTTPS issuer readiness', keycloak_ready, timeout=60)
+    for app in PORTS:
+        wait_until(app+' health', lambda app=app: healthy(app), timeout=45)
+    check('all four applications respond over locally trusted HTTPS')
+
+    request('GET', '/api/orders/'+str(uuid.uuid4()), user=None, expect=401)
+    request('GET', '/api/orders/'+str(uuid.uuid4()), user=None,
+            headers={'Authorization':'Bearer forged.invalid.jwt'}, expect=401)
+    forged = token('alice').split('.')
+    forged[2] = ('a' if forged[2][0] != 'a' else 'b')+forged[2][1:]
+    request('GET', '/api/orders/'+str(uuid.uuid4()), user=None,
+            headers={'Authorization':'Bearer '+'.'.join(forged)}, expect=401)
+    request('POST', '/api/products', body={'name':'Unauthorized', 'price':100, 'stock':40}, expect=403)
+    request('GET', '/api/orders/_operations/breakers', expect=403)
+    check('missing/forged tokens are rejected; customer cannot perform admin operations')
+
+    product = request('POST', '/api/products', user='admin', expect=201,
+                      body={'name':'Smoke '+str(uuid.uuid4()), 'price':100, 'stock':40})
+    product_id = product['id']
+    availability_path = '/api/inventory/availability/'+str(product_id)
+    first = request('GET', availability_path)
+    second = request('GET', availability_path)
+    assert not first['cached'] and second['cached'] and first['observedAt'] == second['observedAt']
+    check('inventory advisory cache reports its initial load and subsequent hit')
+
+    key = str(uuid.uuid4())
+    accepted, payload = create(product_id, quantity=2, key=key)
+    order_id = accepted['id']
+    confirmed = order_in(order_id, {'CONFIRMED'})
+    repeat = request('POST', '/api/orders', body=payload, key=key, expect=202)
+    assert repeat['id'] == order_id
+    request('POST', '/api/orders', body=dict(payload, quantity=3), key=key, expect=409)
+    request('POST', '/api/orders', body=payload, expect=400)
+    payment = request('GET', '/api/payments/status/'+order_id)
+    assert payment['status'] == 'SUCCEEDED' and float(payment['amount']) == float(confirmed['total'])
+    stock = request('GET', availability_path)
+    assert stock['available'] == 38 and not stock['cached']
+    check('durable Saga confirms payment; retries reuse the order; changed payload conflicts; stock decremented once')
+    request('GET', '/api/orders/'+order_id, user='bob', expect=404)
+    request('GET', '/api/payments/status/'+order_id, user='bob', expect=404)
+    request('GET', '/api/orders/'+order_id, user='admin')
+    check('order/payment ownership is enforced inside the services, with an admin override')
+
+    declined, _ = create(product_id, quantity=3, payment='demo-declined')
+    order_in(declined['id'], {'CANCELLED'})
+    assert request('GET', availability_path)['available'] == 38
+    assert request('GET', '/api/payments/status/'+declined['id'])['status'] == 'DECLINED'
+    reservation = request('GET', '/internal/reservations/'+declined['id'], user=None,
+                          base='https://localhost:8082', context=ORDER_TLS)
+    assert reservation['status'] == 'RELEASED'
+    check('definitive payment decline triggers durable stock-release compensation')
+
+    # Service identity and user identity are independently checked.
+    for port in (8081, 8082, 8083):
+        try:
+            request('GET', '/actuator/health', user=None, base=f'https://localhost:{port}')
+        except (urllib.error.URLError, ssl.SSLError, OSError):
+            pass
+        else:
+            raise AssertionError(f'Backend {port} accepted a client without a certificate')
+    request('GET', '/internal/reservations/'+order_id, user='admin',
+            base='https://localhost:8082', context=GATEWAY_TLS, expect=403)
+    request('GET', '/internal/payments/'+order_id, user='admin',
+            base='https://localhost:8083', context=GATEWAY_TLS, expect=403)
+    assert request('GET', '/internal/payments/'+order_id, user=None,
+                   base='https://localhost:8083', context=ORDER_TLS)['status'] == 'SUCCEEDED'
+    request('GET', '/api/products/'+str(product_id), user=None,
+            base='https://localhost:8082', context=ORDER_TLS, expect=401)
+    request('GET', '/internal/reservations/'+order_id, user='admin', expect=403)
+    check('backends require mTLS; only the order certificate authorizes internal APIs; public APIs still require JWT')
+
+    try:
+        request('GET', '/actuator/health', user=None, context=ssl.create_default_context())
+    except (urllib.error.URLError, ssl.SSLError):
+        pass
+    else:
+        raise AssertionError('Private lab CA unexpectedly trusted by default OS trust store')
+    try:
+        with socket.create_connection(('127.0.0.1', 8090), timeout=3) as plain:
+            with PUBLIC_TLS.wrap_socket(plain, server_hostname='not-orderflow.invalid'):
+                raise AssertionError('TLS accepted a mismatched certificate hostname')
+    except ssl.SSLCertVerificationError:
+        pass
+    check('untrusted CA and mismatched hostnames fail TLS verification')
+    return product_id
+
+def resilience(product_id):
+    stopped = set()
+    try:
+        service('stop', 'payment-service')
+        stopped.add('payment-service')
+        pending = [create(product_id)[0]['id'] for _ in range(6)]
+        for order_id in pending:
+            order_in(order_id, {'PAYMENT_PENDING'})
+        wait_until('payment circuit OPEN', lambda: request('GET', '/api/orders/_operations/breakers', user='admin').get('payment') == 'OPEN')
+        assert all(request('GET', '/api/orders/'+order_id)['state'] == 'PAYMENT_PENDING' for order_id in pending)
+        check('payment outage opens its circuit; orders remain pending without fabricated success')
+
+        service('stop', 'order-service')
+        stopped.add('order-service')
+        service('start', 'order-service')
+        stopped.remove('order-service')
+        wait_until('restarted order-service', lambda: healthy('order-service'))
+        assert all(request('GET', '/api/orders/'+order_id)['state'] == 'PAYMENT_PENDING' for order_id in pending)
+        check('pending Saga state survives an order-service process restart')
+        service('start', 'payment-service')
+        stopped.remove('payment-service')
+        wait_until('restarted payment-service', lambda: healthy('payment-service'))
+        for order_id in pending:
+            order_in(order_id, {'CONFIRMED'}, timeout=90)
+        check('recovered payment participant lets persisted orders finish safely')
+
+        service('stop', 'inventory-service')
+        stopped.add('inventory-service')
+        pending_stock = create(product_id)[0]['id']
+        wait_until('inventory reservation retry', lambda: request('GET', '/api/orders/'+pending_stock)['attempts'] > 0)
+        assert request('GET', '/api/orders/'+pending_stock)['state'] == 'RESERVE_PENDING'
+        check('inventory outage defers authoritative stock decisions')
+        service('start', 'inventory-service')
+        stopped.remove('inventory-service')
+        wait_until('restarted inventory-service', lambda: healthy('inventory-service'))
+        order_in(pending_stock, {'CONFIRMED'}, timeout=90)
+        assert request('GET', '/api/inventory/availability/'+str(product_id))['available'] == 31
+        check('inventory recovery resumes reservation; all successful orders consume stock exactly once')
+    finally:
+        for name in sorted(stopped):
+            service('start', name)
+
+def main():
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument('--resilience', action='store_true', help='briefly stop/restart local participant processes')
+    args = parser.parse_args()
+    product_id = basic()
+    if args.resilience:
+        resilience(product_id)
+    print(f'PASS {CHECKS} integration groups; isolated fixture product {product_id}', flush=True)
+
+if __name__ == '__main__':
+    main()

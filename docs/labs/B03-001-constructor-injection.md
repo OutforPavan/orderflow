@@ -21,13 +21,13 @@ with no candidate for its required service should fail during normal eager creat
 
 ## Code changed
 
-- [LearningService](../../src/main/java/com/outforpavan/orderflow/learning/LearningService.java):
+- [LearningService](../../legacy-monolith/src/main/java/com/outforpavan/orderflow/learning/LearningService.java):
   an `@Service` component whose `message()` method supplies the text.
-- [LearningController](../../src/main/java/com/outforpavan/orderflow/learning/LearningController.java):
+- [LearningController](../../legacy-monolith/src/main/java/com/outforpavan/orderflow/learning/LearningController.java):
   one constructor accepting the service and a final reference used by `status()`.
-- [MVC contract test](../../src/test/java/com/outforpavan/orderflow/learning/LearningControllerTest.java):
+- [MVC contract test](../../legacy-monolith/src/test/java/com/outforpavan/orderflow/learning/LearningControllerTest.java):
   explicitly imports the real service in its focused MVC context.
-- [Missing-dependency test](../../src/test/java/com/outforpavan/orderflow/learning/LearningDependencyInjectionTest.java):
+- [Missing-dependency test](../../legacy-monolith/src/test/java/com/outforpavan/orderflow/learning/LearningDependencyInjectionTest.java):
   registers only the controller in an isolated annotation-based context.
 
 ## Observed verification

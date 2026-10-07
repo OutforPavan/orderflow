@@ -46,3 +46,14 @@
   lessons and record actual observations under docs/labs/ as they are performed.
 - Update the notebook, question tracker, progress, and learner interview answers
   with each relevant completed increment; do not invent answers or observations.
+
+## Explicit microservices scope — 2026-10-07
+
+The learner explicitly resumed implementation for four applications, Keycloak
+authentication, locally generated HTTPS certificates, internal client adapters,
+circuit breakers, a durable Saga, caching, and CAP tradeoffs. This authorization
+supersedes the earlier feature pause for this scope. The root Maven reactor is
+now the platform; `legacy-monolith/` retains the previous app and its lessons.
+Use `./scripts/platform setup` before `./dev verify` when preparing a new local
+environment. See docs/MICROSERVICES-LAB.md for the current walkthrough. Continue
+to distinguish trainer verification from learner practice and reviewed answers.

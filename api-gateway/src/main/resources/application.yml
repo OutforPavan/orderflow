@@ -1,0 +1,75 @@
+server:
+  address: ${GATEWAY_ADDRESS:127.0.0.1}
+  port: ${GATEWAY_PORT:8090}
+  shutdown: graceful
+  ssl:
+    bundle: server
+
+spring:
+  application:
+    name: api-gateway
+  config:
+    import: optional:file:${PLATFORM_CONFIG_DIR:.tools/platform/config}/api-gateway.properties
+  ssl:
+    bundle:
+      pem:
+        server:
+          keystore:
+            certificate: ${PLATFORM_PKI_DIR:${platform.root:.}/.tools/platform/pki}/api-gateway.crt
+            private-key: ${PLATFORM_PKI_DIR:${platform.root:.}/.tools/platform/pki}/api-gateway.key
+          truststore:
+            certificate: ${PLATFORM_PKI_DIR:${platform.root:.}/.tools/platform/pki}/ca.crt
+        client:
+          keystore:
+            certificate: ${PLATFORM_PKI_DIR:${platform.root:.}/.tools/platform/pki}/api-gateway.crt
+            private-key: ${PLATFORM_PKI_DIR:${platform.root:.}/.tools/platform/pki}/api-gateway.key
+          truststore:
+            certificate: ${PLATFORM_PKI_DIR:${platform.root:.}/.tools/platform/pki}/ca.crt
+  web:
+    error:
+      include-message: never
+      include-stacktrace: never
+  lifecycle:
+    timeout-per-shutdown-phase: 10s
+  cloud:
+    gateway:
+      server:
+        webflux:
+          httpclient:
+            connect-timeout: 1000
+            response-timeout: 3s
+          routes:
+            - id: inventory-products
+              uri: ${INVENTORY_SERVICE_URL:https://localhost:8082}
+              predicates:
+                - Path=/api/products,/api/products/**
+                - Method=GET,POST,PATCH
+            - id: inventory-availability
+              uri: ${INVENTORY_SERVICE_URL:https://localhost:8082}
+              predicates:
+                - Path=/api/inventory/availability/**
+                - Method=GET
+            - id: order-service
+              uri: ${ORDER_SERVICE_URL:https://localhost:8081}
+              predicates:
+                - Path=/api/orders,/api/orders/**
+                - Method=GET,POST
+            - id: payment-status
+              uri: ${PAYMENT_SERVICE_URL:https://localhost:8083}
+              predicates:
+                - Path=/api/payments/status/**
+                - Method=GET
+
+platform:
+  security:
+    issuer: ${KEYCLOAK_ISSUER:https://localhost:8443/realms/orderflow}
+    audience: orderflow-api
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never

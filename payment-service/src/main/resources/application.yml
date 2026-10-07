@@ -1,0 +1,48 @@
+spring:
+  application:
+    name: payment-service
+  config:
+    import: optional:file:${PLATFORM_CONFIG_DIR:.tools/platform/config}/payment-service.properties
+  datasource:
+    hikari:
+      maximum-pool-size: 10
+      connection-timeout: 2000
+  ssl:
+    bundle:
+      pem:
+        server:
+          keystore:
+            certificate: ${PLATFORM_PKI_DIR:${platform.root:.}/.tools/platform/pki}/payment-service.crt
+            private-key: ${PLATFORM_PKI_DIR:${platform.root:.}/.tools/platform/pki}/payment-service.key
+          truststore:
+            certificate: ${PLATFORM_PKI_DIR:${platform.root:.}/.tools/platform/pki}/ca.crt
+        client:
+          keystore:
+            certificate: ${PLATFORM_PKI_DIR:${platform.root:.}/.tools/platform/pki}/payment-service.crt
+            private-key: ${PLATFORM_PKI_DIR:${platform.root:.}/.tools/platform/pki}/payment-service.key
+          truststore:
+            certificate: ${PLATFORM_PKI_DIR:${platform.root:.}/.tools/platform/pki}/ca.crt
+
+server:
+  address: 127.0.0.1
+  port: 8083
+  ssl:
+    enabled: true
+    bundle: server
+    client-auth: need
+  error:
+    include-message: never
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
+
+platform:
+  security:
+    issuer: ${KEYCLOAK_ISSUER:https://localhost:8443/realms/orderflow}
+    audience: orderflow-api

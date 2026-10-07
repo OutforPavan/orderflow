@@ -16,13 +16,13 @@ scenarios in the PDF tracker. No PDF question is marked Covered by this record.
 
 | Feature | Source / exercise |
 | --- | --- |
-| Validated external configuration | [LearningProperties](../../src/main/java/com/outforpavan/orderflow/learning/LearningProperties.java) and [configuration tests](../../src/test/java/com/outforpavan/orderflow/learning/LearningConfigurationTest.java) |
-| Product create/read/price update | [ProductController](../../src/main/java/com/outforpavan/orderflow/product/ProductController.java), [ProductService](../../src/main/java/com/outforpavan/orderflow/product/ProductService.java) |
-| HTTP input and errors | [CreateProductRequest](../../src/main/java/com/outforpavan/orderflow/product/CreateProductRequest.java), [ApiExceptionHandler](../../src/main/java/com/outforpavan/orderflow/api/ApiExceptionHandler.java) |
-| Schema and persistence | [Migration V1](../../src/main/resources/db/migration/V1__products_and_orders.sql), [Product](../../src/main/java/com/outforpavan/orderflow/product/Product.java) |
-| One transaction for stock and order | [OrderService](../../src/main/java/com/outforpavan/orderflow/order/OrderService.java) |
+| Validated external configuration | [LearningProperties](../../legacy-monolith/src/main/java/com/outforpavan/orderflow/learning/LearningProperties.java) and [configuration tests](../../legacy-monolith/src/test/java/com/outforpavan/orderflow/learning/LearningConfigurationTest.java) |
+| Product create/read/price update | [ProductController](../../legacy-monolith/src/main/java/com/outforpavan/orderflow/product/ProductController.java), [ProductService](../../legacy-monolith/src/main/java/com/outforpavan/orderflow/product/ProductService.java) |
+| HTTP input and errors | [CreateProductRequest](../../legacy-monolith/src/main/java/com/outforpavan/orderflow/product/CreateProductRequest.java), [ApiExceptionHandler](../../legacy-monolith/src/main/java/com/outforpavan/orderflow/api/ApiExceptionHandler.java) |
+| Schema and persistence | [Migration V1](../../legacy-monolith/src/main/resources/db/migration/V1__products_and_orders.sql), [Product](../../legacy-monolith/src/main/java/com/outforpavan/orderflow/product/Product.java) |
+| One transaction for stock and order | [OrderService](../../legacy-monolith/src/main/java/com/outforpavan/orderflow/order/OrderService.java) |
 | Live requests and SQL | [IntelliJ HTTP requests](../../requests/day1.http), [read-only SQL](../../requests/day1.sql) |
-| Rollback after executed stock SQL | [OrderFlowIntegrationTest](../../src/test/java/com/outforpavan/orderflow/OrderFlowIntegrationTest.java) |
+| Rollback after executed stock SQL | [OrderFlowIntegrationTest](../../legacy-monolith/src/test/java/com/outforpavan/orderflow/OrderFlowIntegrationTest.java) |
 
 ## Environment and setup observations
 

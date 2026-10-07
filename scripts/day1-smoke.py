@@ -3,7 +3,7 @@
 
 Uses only the dedicated orderflow_test database. Leaves its two labeled demo rows
 available for inspection; does not delete data or stop any pre-existing process.
-Run ./scripts/db start and ./dev verify first.
+Run ./scripts/db start and ./dev -f legacy-monolith/pom.xml verify first.
 """
 import json
 import os
@@ -16,7 +16,7 @@ import urllib.request
 
 ROOT = Path(__file__).resolve().parent.parent
 CONFIG = ROOT / ".tools/test-database.properties"
-JAR = ROOT / "target/orderflow-0.0.1-SNAPSHOT.jar"
+JAR = ROOT / "legacy-monolith/target/orderflow-0.0.1-SNAPSHOT.jar"
 LOCAL_JAVA = ROOT / ".tools/java21/Contents/Home/bin/java"
 
 
@@ -36,7 +36,7 @@ def request(base, method, path, body=None, expected=200):
 
 class Application:
     def __init__(self, label, arguments):
-        self.log_path = ROOT / "target" / ("day1-smoke-" + label + ".log")
+        self.log_path = ROOT / "legacy-monolith/target" / ("day1-smoke-" + label + ".log")
         self.arguments = arguments
         self.process = None
 
@@ -77,7 +77,7 @@ class Application:
 
 def main():
     if not CONFIG.is_file() or not JAR.is_file():
-        raise SystemExit("Run ./scripts/db start and ./dev verify first.")
+        raise SystemExit("Run ./scripts/db start and ./dev -f legacy-monolith/pom.xml verify first.")
     # No destructive cleanup, but still refuse the normal learning database.
     config = dict(line.split("=", 1) for line in CONFIG.read_text().splitlines()
                   if line.strip() and not line.lstrip().startswith("#") and "=" in line)
@@ -115,7 +115,7 @@ def main():
         assert product["stock"] == 8 and product["price"] == 1199
         assert persisted_order["total"] == 2398
         print("PASS: product and order survive application restart; CLI overrides environment")
-    print("Stopped only the two temporary application processes. SQL logs: target/day1-smoke-*.log")
+    print("Stopped only the two temporary application processes. SQL logs: legacy-monolith/target/day1-smoke-*.log")
     print("Inspect test-database demo rows:", product_path, order_path)
 
 

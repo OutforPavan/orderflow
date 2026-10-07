@@ -15,8 +15,8 @@ The gateway's health endpoint does not prove downstream readiness.
 
 See [the lesson](../API-GATEWAY.md),
 [design decision](../decisions/0004-separate-api-gateway.md),
-[gateway sources](../../gateway/src/main/java/com/outforpavan/orderflow/gateway),
-[configuration](../../gateway/src/main/resources/application.yml),
+[gateway sources](../../api-gateway/src/main/java/com/outforpavan/orderflow/gateway),
+[configuration](../../api-gateway/src/main/resources/application.yml),
 and [practice requests](../../requests/gateway.http).
 
 ## Trainer verification

@@ -1,0 +1,29 @@
+{
+  "realm": "orderflow",
+  "enabled": true,
+  "sslRequired": "all",
+  "registrationAllowed": false,
+  "resetPasswordAllowed": false,
+  "accessTokenLifespan": 300,
+  "roles": {"realm": [{"name":"customer"},{"name":"admin"}]},
+  "clients": [{
+    "clientId": "orderflow-lab",
+    "name": "Local CLI learning client (not a production browser flow)",
+    "enabled": true,
+    "publicClient": true,
+    "protocol": "openid-connect",
+    "standardFlowEnabled": false,
+    "directAccessGrantsEnabled": true,
+    "defaultClientScopes": ["basic", "profile", "email", "roles"],
+    "protocolMappers": [{
+      "name": "orderflow-api-audience",
+      "protocol": "openid-connect",
+      "protocolMapper": "oidc-audience-mapper",
+      "config": {
+        "included.custom.audience": "orderflow-api",
+        "access.token.claim": "true",
+        "id.token.claim": "false"
+      }
+    }]
+  }]
+}
