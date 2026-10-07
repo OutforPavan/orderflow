@@ -21,6 +21,13 @@ the earlier class walkthrough and security choice remain open.
 
 ## Earlier position and pending checkpoints
 
+Walkthrough follow-up, 2026-10-07: prepared a code-by-code explanation and likely
+interviewer follow-ups in technical notebook section 14.6, following the learner's
+explicit request. Explained the gateway/framework boundary, request/response
+filter lifecycle, connection-error mapping, and retry/idempotency distinction.
+Application code is unchanged; prior test results remain dated implementation
+evidence. Learner request-flow explanation and live practice remain pending.
+
 - Environment and minimal application baseline: prepared.
 - Baseline: Java 21, Spring Boot 4.1.1, Maven, one HTTP endpoint.
 - Repository: [OutforPavan/orderflow](https://github.com/OutforPavan/orderflow).

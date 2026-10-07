@@ -1593,3 +1593,83 @@ Only health is exposed by this gateway, with no details. Relevant lab families
 are R01/X02/O01; their broader exercises and all source-question completion
 criteria remain open. No new throughput, availability, or learner-completion
 claim follows from the implementation.
+
+### 14.6 Code walkthrough and interviewer follow-ups — 2026-10-07
+
+The learner explicitly requested an explanation of the implemented code and likely
+follow-ups. This is trainer-prepared explanation; only the earlier timeout/retry
+prediction has a reviewed learner answer. Application code is unchanged. The
+18 gateway tests and 74 backend tests are the earlier implementation evidence,
+not newly executed checks for this documentation update.
+
+Read the code in this order:
+
+1. `gateway/pom.xml`: Boot manages the application dependency baseline; the Cloud
+   BOM aligns Cloud modules; the WebFlux gateway starter supplies proxy capability.
+   A BOM manages versions and does not itself add the gateway to the classpath.
+2. `GatewayApplication`: `@SpringBootApplication` enables auto-configuration and
+   component scanning. `SpringApplication.run` starts the second application.
+   Gateway handler mappings and built-in routing filters provide forwarding;
+   no custom order controller is required in the gateway.
+3. `application.yml`: `server.port` is the incoming listener; the route `uri` is
+   the outgoing target. `id` names a route for diagnostics. `Path` is the matching
+   predicate. The two comma-separated patterns are alternatives in that predicate;
+   separate predicate entries normally combine with AND. Both routes currently
+   target the same backend; two routes are not two business microservices.
+4. `RequestIdFilter`: `ServerWebExchange` carries the request, response and shared
+   attributes. `mutate()` builds a request decorator with the generated header;
+   it does not send a request by itself. `headers.set` replaces incoming values.
+   `chain.filter(forwarded)` delegates the modified exchange to later processing.
+   Spring's gateway routing machinery eventually sends the HTTP request.
+5. The filter registers `beforeCommit` during request processing. Its callback
+   later sets the response ID and reads the route/status immediately before
+   response headers commit. Registering a callback is not executing it immediately.
+   `System.nanoTime()` measures elapsed duration, not a wall-clock timestamp.
+   Lower order values run earlier in an ordered chain; `HIGHEST_PRECEDENCE` places
+   this WebFilter early. This ordering is distinct from exception-handler ordering.
+6. `Mono<Void>` represents asynchronous completion or failure without an emitted
+   business value. It does not mean there is no HTTP response body: other parts
+   of the chain write that body. Spring subscribes to the returned pipeline;
+   manually calling `subscribe()` or blocking inside the filter would break the
+   intended request lifecycle. `Mono.empty()` completes the before-commit action.
+7. `GatewayHttpClientConfiguration`: the bean customizes Gateway's existing HTTP
+   client. `disableRetry(true)` disables Reactor Netty's separate retry-on-reset
+   behavior. Omitting a Gateway Retry filter alone does not express that setting.
+8. `GatewayConnectionErrorHandler`: `@Order(-2)` precedes Boot's default error
+   renderer. Wrapped connection/DNS errors become a 502 status exception.
+   `Mono.error` delegates failure to later exception handlers; it does not write
+   JSON itself. Existing status exceptions and already committed responses pass
+   through. Upstream HTTP 400/409/500 responses are responses, not automatically
+   exceptions for this handler to convert. Native response timeout remains 504.
+
+Follow-ups to rehearse after explaining the request flow:
+
+| Interviewer question | Reference answer and boundary |
+| --- | --- |
+| WebFilter, GlobalFilter, GatewayFilter: what differs? | WebFilter surrounds WebFlux request handling, including local/unmatched paths. GlobalFilter joins the gateway chain for matched routes. GatewayFilter is attached to selected routes. |
+| Does reactive mean every request gets a new thread? | No. Nonblocking network I/O allows event-loop threads to serve many in-flight requests; it does not make blocking code nonblocking or guarantee faster business processing. |
+| Why not put JPA calls in a gateway filter? | They block and couple traffic handling to the database. The existing MVC service owns JPA work and the stock/order transaction. |
+| Do multiple path patterns require both paths to match? | No. Patterns inside this Path predicate are alternatives. A separate Method predicate could be combined with Path; no Method predicate is configured here. |
+| Does our route redirect the browser? | No. The gateway proxies the call server-side and returns the response. An HTTP redirect tells the client to make another request. |
+| Why retain `/api`? | Orderflow controllers map `/api/products` and `/api/orders`. Stripping the prefix changes the backend URL and produces an unmatched endpoint. |
+| Is a three-second timeout a circuit breaker? | No. A timeout bounds one wait; a breaker uses recent outcomes to reject later calls and probe recovery. This lesson has no breaker. |
+| Does 504 mean no order exists? | No. The backend may have committed. A durable idempotency key must identify the same business intent across attempts and be enforced with the order transaction. |
+| Is the request ID an idempotency key or trace ID? | No. A fresh ID labels one gateway attempt. It does not deduplicate orders, authenticate a user, or implement distributed trace/span propagation. |
+| Is Eureka mandatory? | No. We use a fixed HTTP URL. `lb://orderflow` would require load-balancer support and configured service instances from discovery or another supplier; naming a service alone is insufficient. |
+| How would JWT security work? | Use Spring Security resource-server support to validate signed tokens and required claims; enforce the intended audience. Backend access and resource ownership also need enforcement. JWT decoding alone is not verification. None is implemented here. |
+| How would multiple gateways share quotas? | Use a shared limiter, for example Redis-backed token buckets keyed by a trusted identity; choose outage policy deliberately. Per-process counters multiply an intended global quota as replicas grow. Not implemented. |
+| Could the gateway be a single point of failure? | One instance can be. Multiple instances behind a load balancer, bounded resources and deliberate rollout/readiness behavior reduce that risk; deployments still require failure testing. |
+| What is the difference from a load balancer? | Load balancing distributes traffic across instances; API gateways commonly also apply application-level routing and policies. Products can overlap. Our fixed-URL example does not demonstrate load balancing. |
+| What production claim can this example support? | Tested local routing and selected failures. It does not demonstrate production traffic capacity, high availability, security enforcement or performance improvement. |
+
+Use [the existing gateway guide](API-GATEWAY.md) for the runnable exercise and
+[the lab record](labs/INTERVIEW-api-gateway.md) for actual verification. Official
+references: [request pipeline](https://docs.spring.io/spring-cloud-gateway/reference/spring-cloud-gateway-server-webflux/how-it-works.html),
+[gateway filter scope and load balancing](https://docs.spring.io/spring-cloud-gateway/reference/spring-cloud-gateway-server-webflux/global-filters.html),
+[HTTP client retry](https://projectreactor.io/docs/netty/release/api/reactor/netty/http/client/HttpClient.html#disableRetry(boolean)),
+[JWT resource server](https://docs.spring.io/spring-security/reference/reactive/oauth2/resource-server/jwt.html),
+and [shared rate limiting](https://docs.spring.io/spring-cloud-gateway/reference/spring-cloud-gateway-server-webflux/gatewayfilter-factories/requestratelimiter-factory.html).
+
+Next learner review: explain why stock validation and the order transaction stay
+in `OrderService` even when incoming requests pass through the gateway. Do not mark
+the explanation, live practice, or broader coverage complete until reviewed.

@@ -310,3 +310,12 @@ Pending prompts, to review one at a time:
 Learner execution, observations, full explanation, and follow-up review: pending.
 Use the lab record for actual trainer checks; no PDF item is marked Covered from
 this preparation or from the single correct prediction.
+
+Follow-up request, 2026-10-07: the learner asked for an implemented-code walkthrough
+and interviewer follow-up preparation. Added trainer reference material in
+[technical notebook 14.6](TECHNICAL-NOTEBOOK.md#146-code-walkthrough-and-interviewer-follow-ups--2026-10-07)
+covering startup/dependencies, route matching, the reactive filter lifecycle,
+exception handling, retry ownership, and possible security/scaling extensions.
+No new learner answer is supplied by this request. The stock-validation ownership
+question and full request-flow explanation remain pending; no live practice or
+coverage completion is inferred. No application code or new test result is added.
