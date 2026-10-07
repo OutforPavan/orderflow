@@ -21,6 +21,13 @@ the earlier class walkthrough and security choice remain open.
 
 ## Earlier position and pending checkpoints
 
+Shopping-product follow-up, 2026-10-07: prepared notebook section 14.7 with a
+four-application layout, architecture diagram, public route boundaries and checkout
+code path for hypothetical Order/Inventory/Payment services. No source code was
+split or implemented; no new tests ran. Routing versus workflow orchestration,
+service data ownership and payment-timeout uncertainty are reference material;
+learner review, implementation and coverage criteria remain open.
+
 Walkthrough follow-up, 2026-10-07: prepared a code-by-code explanation and likely
 interviewer follow-ups in technical notebook section 14.6, following the learner's
 explicit request. Explained the gateway/framework boundary, request/response

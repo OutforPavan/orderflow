@@ -319,3 +319,10 @@ exception handling, retry ownership, and possible security/scaling extensions.
 No new learner answer is supplied by this request. The stock-validation ownership
 question and full request-flow explanation remain pending; no live practice or
 coverage completion is inferred. No application code or new test result is added.
+
+Shopping-system design follow-up, 2026-10-07: the learner asked for an API gateway
+design for three microservices (Order, Inventory, Payment), with a diagram and
+code paths. Technical notebook section 14.7 prepares that scenario, distinguishing
+public routing from OrderService checkout orchestration and local transactions
+from a durable distributed workflow. This is a hypothetical design, not a service
+extraction or deployed system. Learner explanation and practice remain pending.

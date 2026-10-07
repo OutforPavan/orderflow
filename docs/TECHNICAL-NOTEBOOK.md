@@ -1673,3 +1673,122 @@ and [shared rate limiting](https://docs.spring.io/spring-cloud-gateway/reference
 Next learner review: explain why stock validation and the order transaction stay
 in `OrderService` even when incoming requests pass through the gateway. Do not mark
 the explanation, live practice, or broader coverage complete until reviewed.
+
+### 14.7 Gateway with Order, Inventory and Payment microservices — 2026-10-07
+
+The learner requested a hypothetical shopping-product design, diagram and code
+paths. This is a proposed topology for explanation; the current Orderflow backend
+has not been split into three services. No application code, deployment or test
+result is added. Earlier learner checkpoints and coverage counts remain open.
+
+Use three business services plus one independently runnable gateway application.
+Each has its own Maven POM, source roots, configuration, tests and executable JAR.
+The repository can contain all four as sibling folders. An optional root Maven
+aggregator would use packaging `pom`; it is a build convenience, not a requirement
+for microservices. Each business service owns its data and transactions. Logical
+database ownership does not require a separate physical database server per service.
+The gateway has no order/inventory/payment database.
+
+```mermaid
+flowchart TB
+    C[Web or mobile client] --> G[API Gateway :8090]
+    G -->|Order API| O[OrderService :8081]
+    G -->|Availability GET| I[InventoryService :8082]
+    G -->|Authorized payment-status GET| P[PaymentService :8083]
+    O -.->|Internal reservation calls| I
+    O -.->|Internal payment calls| P
+    O --> OD[(Order database)]
+    I --> ID[(Inventory database)]
+    P --> PD[(Payment database)]
+```
+
+Proposed folders, not directories created by this lesson:
+
+```text
+shopping-platform/
+  api-gateway/pom.xml
+  api-gateway/src/main/java/com/shop/gateway/GatewayApplication.java
+  api-gateway/src/main/java/com/shop/gateway/filter/RequestIdFilter.java
+  api-gateway/src/main/resources/application.yml
+  order-service/pom.xml
+  order-service/src/main/java/com/shop/order/OrderApplication.java
+  order-service/src/main/java/com/shop/order/controller/OrderController.java
+  order-service/src/main/java/com/shop/order/service/CheckoutService.java
+  order-service/src/main/java/com/shop/order/client/InventoryClient.java
+  order-service/src/main/java/com/shop/order/client/PaymentClient.java
+  order-service/src/main/java/com/shop/order/repository/OrderRepository.java
+  inventory-service/pom.xml
+  inventory-service/src/main/java/com/shop/inventory/InventoryApplication.java
+  inventory-service/src/main/java/com/shop/inventory/controller/AvailabilityController.java
+  inventory-service/src/main/java/com/shop/inventory/controller/InternalReservationController.java
+  inventory-service/src/main/java/com/shop/inventory/service/ReservationService.java
+  inventory-service/src/main/java/com/shop/inventory/repository/StockRepository.java
+  payment-service/pom.xml
+  payment-service/src/main/java/com/shop/payment/PaymentApplication.java
+  payment-service/src/main/java/com/shop/payment/controller/PaymentStatusController.java
+  payment-service/src/main/java/com/shop/payment/controller/InternalPaymentController.java
+  payment-service/src/main/java/com/shop/payment/service/PaymentService.java
+  payment-service/src/main/java/com/shop/payment/client/PaymentProviderClient.java
+  payment-service/src/main/java/com/shop/payment/repository/PaymentRepository.java
+```
+
+All services also have their own `src/main/resources/application.yml` and
+`src/test/java` directories. Common DTOs are not shared JPA entities or permission
+to access another service's tables. `InventoryClient` is an HTTP client adapter,
+not an injected instance of another application's Java service object.
+
+| Proposed public route | Destination | Method policy in example |
+| --- | --- | --- |
+| `/api/orders` and `/api/orders/**` | OrderService :8081 | GET, POST; actual operations still defined and authorized by backend |
+| `/api/inventory/availability/**` | InventoryService :8082 | GET only |
+| `/api/payments/status/**` | PaymentService :8083 | GET only, with customer ownership authorization |
+
+The gateway can route all three public APIs, but a service needs no public route
+unless clients need an API it owns. Reservations/releases and payment execution
+use protected `/internal/...` APIs, excluded from these public route predicates.
+An internal-looking path is not access control by itself: authenticate service
+identities, enforce permissions, and restrict reachability. Internal calls normally
+use private service addresses or discovery, not the public gateway round trip.
+
+Illustrative successful checkout execution path:
+
+```text
+POST /api/orders -> Gateway filters/route -> OrderController -> CheckoutService
+  -> OrderRepository: commit pending order/workflow state
+  -> InventoryClient -> InternalReservationController -> ReservationService
+       -> StockRepository: commit stock reservation in inventory database
+  -> PaymentClient -> InternalPaymentController -> PaymentService
+       -> PaymentProviderClient + durable payment state in payment database
+  -> OrderRepository: commit confirmed order state
+  -> OrderController response -> Gateway response filters -> Client
+```
+
+This sequence illustrates ownership; a straight in-memory chain is insufficient
+for crash recovery. In a production design, persist workflow state and stable
+operation IDs, execute idempotent steps, and resume after interruption. Local
+transactions cover each service's changes; no single Spring `@Transactional`
+annotation makes the HTTP calls and three databases atomic. Avoid holding a DB
+transaction open while waiting for remote calls. A Saga/state machine coordinates
+progress and compensations. Confirmed payment rejection can release a reservation;
+a payment timeout leaves an unknown outcome that must be reconciled, rather than
+immediately assuming failure, replaying with a new operation ID, or blindly refunding.
+Compensations themselves can fail and require durable retry/recovery.
+
+If completion takes longer than the API response budget, persist acceptance and
+return `202 Accepted` with an order ID/status URL while durable processing continues.
+Do not use an untracked background thread or report payment success on forwarding.
+The gateway selects the order route; it does not own this business workflow.
+
+Fixed local target URLs illustrate routing. For containers use service DNS names,
+since localhost inside the gateway container refers to that container. `lb://...`
+requires Spring Cloud LoadBalancer plus configured/discovered service instances.
+In production use TLS and trusted identities, restrict backend ingress, and run
+gateway replicas behind a load balancer. These are proposed controls, not features
+installed by this discussion.
+
+Official sources: [Gateway request flow](https://docs.spring.io/spring-cloud-gateway/reference/spring-cloud-gateway-server-webflux/how-it-works.html),
+[load-balanced routes](https://docs.spring.io/spring-cloud-gateway/reference/spring-cloud-gateway-server-webflux/global-filters.html),
+and [Saga/local transaction and compensation model](https://learn.microsoft.com/en-us/azure/architecture/patterns/saga).
+
+Next review: when `POST /api/orders` matches the order route, which component
+decides to reserve stock and request payment, and why? Learner answer pending.
