@@ -1,0 +1,40 @@
+@gateway = http://127.0.0.1:8090
+
+### Gateway's own health (does not check Orderflow)
+GET {{gateway}}/actuator/health
+
+### Create via gateway; a fresh product makes the exercise repeatable
+# @name createGatewayProduct
+POST {{gateway}}/api/products
+Content-Type: application/json
+X-Request-Id: client-value-will-be-replaced
+
+{"name":"Gateway practice keyboard","price":1250.00,"stock":10}
+
+> {% client.global.set("gatewayProductId", response.body.id); %}
+
+### Read the product; observe X-Request-Id and gateway log
+GET {{gateway}}/api/products/{{gatewayProductId}}
+
+### Create an order ONCE (no idempotency protection is installed yet)
+POST {{gateway}}/api/orders
+Content-Type: application/json
+
+{"productId":{{gatewayProductId}},"quantity":2}
+
+> {% client.global.set("gatewayOrderId", response.body.id); %}
+
+### Read the actual generated order
+GET {{gateway}}/api/orders/{{gatewayOrderId}}
+
+### Backend validation still owns invalid business input: expect 400
+POST {{gateway}}/api/orders
+Content-Type: application/json
+
+{"productId":{{gatewayProductId}},"quantity":0}
+
+### Not in the gateway route allowlist: expect 404
+GET {{gateway}}/api/learning/status
+
+### Management internals are not exposed: expect 404
+GET {{gateway}}/actuator/env

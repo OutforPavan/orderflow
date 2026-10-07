@@ -92,7 +92,7 @@ list alone is not a completeness test for the original curriculum.
 | EXT08 | Caching, TTL, invalidation, races, stampedes and outages | C01 | Planned |
 | EXT09 | Kafka fundamentals, partitioning, groups, offsets, ordering, lag and schema evolution | K01, K02 | Planned |
 | EXT10 | Reliable event publication, outbox, idempotent consumption and recovery | K02, K03 | Planned |
-| EXT11 | Microservice boundaries, contracts, resilience and distributed workflows | X02, R01, R02 | Planned |
+| EXT11 | Microservice boundaries, contracts, resilience and distributed workflows | X02, R01, R02 | In progress: [first gateway exercise](labs/INTERVIEW-api-gateway.md); learner practice and broader workflow/resilience evidence pending |
 | EXT12 | Observability, deployment, capacity, scheduling and incident diagnosis | O01-O04, S01 | Planned |
 | EXT13 | Unit/integration/contract testing, reproducible environments and delivery | X03 | In progress: Day 1 unit/MVC/PostgreSQL/restart checks; delivery and broader contract checks pending |
 | EXT14 | JVM/GC, memory domains, executors, futures, locks, ThreadLocal and virtual threads | J01-J04 | Planned |

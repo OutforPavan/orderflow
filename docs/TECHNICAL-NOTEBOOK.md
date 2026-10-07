@@ -1457,3 +1457,139 @@ Future live checks, not executed for this explanation:
 Related planned labs: D04 (idempotency), R01/O02 (admission and overload), X01
 (identity/authorization). P1-Q02, P1-Q16, and P1-Q33 remain Planned; learner answers,
 implementation, and evidence are pending.
+
+## 14. API gateway with Spring Boot - 2026-10-07
+
+The learner explicitly requests a practical API-gateway implementation for the
+Capgemini client round. This narrow lesson resumes the requested feature work;
+earlier class walkthrough and security choices remain open. The
+[step-by-step gateway guide](API-GATEWAY.md) contains run commands, file links,
+and the current scope. The [lab record](labs/INTERVIEW-api-gateway.md) separates
+actual trainer verification from learner practice. This chapter is prepared
+reference material, not a claim that the learner completed the exercise.
+
+### 14.1 Boundary and request mechanism
+
+The new independently built `gateway/` application is the local client entry
+point at `127.0.0.1:8090`. It uses Spring Cloud Gateway Server WebFlux/Netty. The
+existing MVC/JPA backend remains at `127.0.0.1:8080` and keeps its database
+transactions. No business service was extracted: both route families target
+the same backend. [Decision 0004](decisions/0004-separate-api-gateway.md) explains
+the extra process/hop and why this boundary is useful for the lesson.
+
+A route combines a name, target, matching conditions, and filters. A predicate
+answers whether the request matches; a filter participates before/after routing.
+Here explicit `Path` predicates allow `/api/products` and `/api/products/**`,
+plus `/api/orders` and `/api/orders/**`. Paths are preserved because the backend
+already maps `/api/...`; `/api/learning/**` is not proxied. A matched path does
+not guarantee a backend resource or HTTP method exists.
+[Gateway concepts](https://docs.spring.io/spring-cloud-gateway/reference/spring-cloud-gateway-server-webflux/glossary.html).
+
+For an order POST:
+
+1. `RequestIdFilter`, a WebFlux `WebFilter`, creates a UUID and replaces the
+   incoming `X-Request-Id`. Its scope includes unmatched/local requests.
+2. Gateway selects `orderflow-orders` and the framework executes the route's
+   filter chain. Its HTTP client forwards the request to `ORDERFLOW_URL`.
+3. MVC in the separate backend performs JSON conversion and validation. The
+   existing `OrderService` locks/reserves stock and stores the order in its
+   transaction. The gateway has no JPA dependency or order business rule.
+4. The backend status/body travels back. Immediately before response headers are
+   committed, our filter returns the generated ID and logs request ID, route,
+   method, status, and elapsed milliseconds.
+
+The reactive gateway does not require a reactive backend. It waits for the remote
+HTTP response without using a blocking database call on its own event-loop thread.
+The backend's JDBC work still blocks its own execution resources. Avoid `.block()`,
+sleep, JDBC, and blocking external SDK calls inside gateway filters; throughput
+claims require measurements rather than the word “reactive.”
+
+### 14.2 Version and configuration reasoning
+
+`gateway/pom.xml` retains Java 21 and Boot 4.1.1 and imports Cloud BOM 2025.1.3,
+which manages Gateway 5.0.3. The [official release announcement](https://spring.io/blog/2026/08/20/spring-cloud-2025-1-3-has-been-released/)
+confirms Boot 4.1 compatibility. Dependency management selects aligned versions;
+the Gateway WebFlux starter supplies dependencies; Boot configures runtime beans.
+These remain three different responsibilities.
+
+The Gateway 5 properties are under `spring.cloud.gateway.server.webflux`.
+`connect-timeout: 1000` uses milliseconds; `response-timeout: 3s` uses a duration.
+`GATEWAY_ADDRESS`, `GATEWAY_PORT`, and `ORDERFLOW_URL` can override the local
+defaults. `ORDERFLOW_URL` is controlled by the operator, not taken from an incoming
+request. A fixed HTTP target is neither service discovery nor load balancing.
+[Gateway properties](https://docs.spring.io/spring-cloud-gateway/reference/configprops.html),
+[timeout units](https://docs.spring.io/spring-cloud-gateway/reference/spring-cloud-gateway-server-webflux/http-timeouts-configuration.html).
+
+The two builds remain independent: `./dev verify` validates the backend;
+`./dev -f gateway/pom.xml verify` validates the gateway. Both commands run from
+the repository root. Gateway checks can use a controlled local HTTP backend,
+while the real order-flow exercise additionally requires PostgreSQL and Orderflow.
+
+### 14.3 Failure behavior and what cannot be inferred
+
+| Evidence | What it means | What it does not establish |
+| --- | --- | --- |
+| Backend 400/404/409 passes through | Existing API validation/missing-resource/conflict response was returned. | The gateway implemented those business rules. |
+| 502 from recognized connection/DNS failure | The gateway could not establish the requested downstream communication. | Every possible network error has the same classification. |
+| Native 504 response timeout | The gateway's downstream response wait expired. | The backend transaction rolled back or the order does not exist. |
+| Gateway health UP | The gateway's own health contributors report healthy. | The configured backend is reachable or can create orders. |
+| Request ID in response and gateway log | One gateway request can be correlated. | The caller is authenticated, writes are deduplicated, or distributed tracing exists. |
+
+`GatewayConnectionErrorHandler` runs before Boot's renderer, translates only the
+recognized causes, and passes other failures onward. It does not try to replace
+an already committed response. Backend `@ControllerAdvice` belongs to another
+application and cannot handle a failed gateway-to-backend connection.
+
+Timeouts bound particular waits, not every stage of a stream or the entire
+client experience. The filter's `beforeCommit` elapsed time ends at response
+commitment, not at delivery of the whole body; early disconnections may not log.
+For implementation details see [Gateway 5.0.3 NettyRoutingFilter](https://github.com/spring-cloud/spring-cloud-gateway/blob/v5.0.3/spring-cloud-gateway-server-webflux/src/main/java/org/springframework/cloud/gateway/filter/NettyRoutingFilter.java).
+
+### 14.4 Retry ownership and the learner's prediction
+
+We omit the Gateway `Retry` filter and also disable Reactor Netty's separate
+automatic connection-reset retry through `HttpClientCustomizer`. A default in
+the transport library can otherwise replay independently of an explicit gateway
+retry filter. [Reactor Netty disableRetry API](https://projectreactor.io/docs/netty/release/api/reactor/netty/http/client/HttpClient.html#disableRetry(boolean)).
+
+The learner answered the retry prediction: **“No—first check the outcome or use an
+idempotency key”**. Review: correct conceptual prediction. The response may be
+lost after commit. Refine the key part: the service must durably store/enforce
+the key and replay its result; a header alone does nothing in the present code.
+The current stock lock prevents conflicting stock updates but does not identify
+duplicate purchase intent. Without a known order identifier or durable request
+mapping, checking an unknown outcome itself can require reconciliation.
+
+No blind POST retry is justified by 504 alone. A future idempotency implementation
+belongs with the business transaction and uniqueness constraint, as developed in
+chapter 13. The learner's correct prediction does not establish implementation,
+the complete request-path explanation, or successful live practice.
+
+### 14.5 Prepared experiments and interview follow-ups
+
+Use the [lesson commands](API-GATEWAY.md#5-run-the-real-productorder-flow) to create
+a product and order through port 8090, capture their returned IDs, and compare
+the proxied and direct product reads. Send a caller-chosen request ID and confirm
+that it is replaced. Stop only the backend and predict the difference between
+the proxied GET and gateway health. Observe a slow-response test and explain why
+its 504 cannot establish business rollback. Record actual outcomes in the lab;
+these prepared instructions are not evidence that the learner ran them.
+
+| Follow-up | Reference answer to compare after an attempt |
+| --- | --- |
+| Why keep the gateway separate from MVC/JPA? | Separate runtime and deployment boundaries, clear ownership, and no blocking business work in the reactive proxy; the cost is another hop/process. |
+| Does adding a route create a microservice? | No. These two routes both reach the existing single backend. |
+| Why not add `StripPrefix=1`? | The existing backend expects `/api`; removing it changes the destination contract. |
+| Is `X-Request-Id` an idempotency key? | No. It identifies one HTTP attempt; a durable idempotency key identifies one business intent across attempts. |
+| Does three-second timeout guarantee three-second body delivery? | No. Connection, response, streaming, and end-to-end deadlines have distinct boundaries. |
+| Why can health remain UP when Orderflow is stopped? | Gateway health does not include a custom backend business-readiness check. |
+| Can the gateway alone secure orders? | Authentication/authorization and trusted backend access must be designed and enforced; this lesson has no such protection. |
+| Does a Redis rate limiter prevent duplicates? | It limits admitted traffic; duplicate effects require separate durable idempotency. |
+
+This is a production-oriented foundation. Authentication/TLS, shared admission
+limits, circuit breakers, service discovery/load balancing, backend ingress
+restrictions, distributed tracing, and deployment redundancy remain future work.
+Only health is exposed by this gateway, with no details. Relevant lab families
+are R01/X02/O01; their broader exercises and all source-question completion
+criteria remain open. No new throughput, availability, or learner-completion
+claim follows from the implementation.

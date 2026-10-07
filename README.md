@@ -3,6 +3,20 @@
 A Java 21 learning project that will grow into an order and inventory backend.
 We start from fundamentals, explain and implement together, and add one concept at a time.
 
+## API gateway interview lesson — 2026-10-07
+
+The first gateway exercise adds a separate application in `gateway/` that forwards
+product and order requests to the existing backend. See the
+[guided explanation](docs/API-GATEWAY.md), [HTTP requests](requests/gateway.http),
+and [verification record](docs/labs/INTERVIEW-api-gateway.md).
+Run the backend as below, then in another terminal run
+`./dev -f gateway/pom.xml spring-boot:run` and use `http://127.0.0.1:8090`.
+Validate the two applications separately: `./dev verify` and
+`./dev -f gateway/pom.xml verify`. The root build does not include the gateway.
+This is a local, production-oriented routing foundation; authentication, distributed
+rate limiting, and production deployment remain future lessons. Earlier learner
+checkpoints remain open.
+
 ## Current checkpoint
 
 Day 1 implementation: product REST APIs, validated DTOs, PostgreSQL/Flyway/JPA,
@@ -12,7 +26,7 @@ reports that it survived application restart, and shared its subsequent stock-8
 response after an order request. The actual order JSON and remaining drills have
 not yet been reviewed.
 
-**Current focus, 2026-09-29:** explain Spring Security authentication and
+**Earlier security checkpoint, 2026-09-29:** explain Spring Security authentication and
 authorization for the learner's interview question, using the
 [security guide](docs/SPRING-SECURITY.md). Its code is a prepared reference, not
 installed security. The existing [class walkthrough](docs/CODE-WALKTHROUGH.md) and

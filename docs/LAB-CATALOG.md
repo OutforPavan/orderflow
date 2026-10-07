@@ -9,6 +9,14 @@ deliberately crash, deadlock, or exhaust a resource use separate, bounded local
 processes with a timeout and cleanup. Failure modes do not become default behavior
 of the main application. Payment scenarios use a simulated provider.
 
+## Current gateway exercise — 2026-10-07
+
+The [API gateway lesson](API-GATEWAY.md) is a small R01/X02 prerequisite:
+independent process, explicit HTTP contracts, real proxy requests, bounded waits,
+and failure behavior. [Evidence](labs/INTERVIEW-api-gateway.md) distinguishes
+trainer verification and the learner's correct timeout prediction from pending
+live learner practice. It does not complete either lab family.
+
 ## The required exercise cycle
 
 1. State the requirement and predict behavior, including the failure case.

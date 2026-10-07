@@ -1,6 +1,25 @@
 # Learning progress
 
-## Current position
+## Current focus — 2026-10-07
+
+The learner explicitly requested API gateway explanation and implementation for
+the Capgemini client round. This narrowly resumes feature work for that topic;
+the earlier class walkthrough and security choice remain open.
+
+- Prepared a separate reactive gateway with explicit product/order routes,
+  UUID request IDs, connection/response timeouts, transport retry disabled, and
+  limited health exposure. Backend MVC/JPA code remains the business boundary.
+- [Gateway lesson](API-GATEWAY.md) and
+  [verification record](labs/INTERVIEW-api-gateway.md) track the actual checks.
+- Learner correctly predicted that a timed-out order request must not be blindly
+  retried: "No—first check the outcome or use an idempotency key". Reviewed as
+  correct: a timeout does not prove rollback; durable idempotency belongs at the
+  order transaction boundary. No idempotency feature is installed by this lesson.
+- Live learner requests and route/filter explanation remain pending. No study
+  duration is inferred. Full completion remains 0/95 PDF items and 0/14 broader
+  requirements. This exercise is part of EXT11 (R01/X02), not full completion.
+
+## Earlier position and pending checkpoints
 
 - Environment and minimal application baseline: prepared.
 - Baseline: Java 21, Spring Boot 4.1.1, Maven, one HTTP endpoint.

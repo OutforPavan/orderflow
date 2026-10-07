@@ -264,3 +264,49 @@ with simultaneous duplicates on two replicas; what if the first response is lost
 what if the key or payload changes; what happens after key expiry? Answers and
 future checks are in chapter 13. No learner response, protection implementation,
 load result, or completion of a PDF exercise is claimed.
+
+
+## Capgemini client round: API gateway with Spring Boot - 2026-10-07
+
+The learner requests explanation and practical implementation in Orderflow.
+The [gateway guide](API-GATEWAY.md), [technical notebook chapter 14](TECHNICAL-NOTEBOOK.md#14-api-gateway-with-spring-boot---2026-10-07),
+and [lab record](labs/INTERVIEW-api-gateway.md) describe the independent WebFlux
+gateway and the limits of this first lesson. Earlier class walkthrough and
+security questions remain open.
+
+Prepared answer outline: an API gateway provides a client-facing HTTP entry
+point; route predicates choose a backend; filters apply shared request/response
+behavior. Our gateway forwards product/order paths to the existing MVC service,
+generates request IDs, bounds downstream waiting, and distinguishes connection
+failure from a response timeout. Business validation and transactions stay in
+the service. Avoid automatic write retries until durable idempotency is available.
+Production identity, quotas, availability, and deployment controls remain separate
+work. This is a project learning example, not claimed production experience.
+
+Learner's retry prediction:
+
+> No—first check the outcome or use an idempotency key
+
+Review: correct conceptual prediction. An order may commit before the caller
+receives its response. A safe idempotency key requires service/database enforcement
+and a replayable result; sending that header alone has no effect in the current
+implementation. Outcome lookup needs a known order ID or durable request mapping.
+This response does not establish that the live timeout/idempotency drill or the
+complete gateway lesson was performed.
+
+Pending prompts, to review one at a time:
+
+- Trace one `POST /api/orders` from port 8090 through commit and back. Which
+  application owns JSON validation, the stock lock, and the transaction?
+- Distinguish route, predicate, and filter using the actual configuration.
+- Why are WebFlux and blocking JPA in separate applications? What happens if
+  blocking work runs on the gateway event loop?
+- Why does `/api/learning/status` return 404 through the gateway while the backend
+  still has that endpoint? How does that differ from an unknown product ID?
+- Why can gateway health be UP when a product GET receives 502?
+- What does the logged elapsed time measure, and what does it omit?
+- What must change before the gateway becomes an enforced production entry point?
+
+Learner execution, observations, full explanation, and follow-up review: pending.
+Use the lab record for actual trainer checks; no PDF item is marked Covered from
+this preparation or from the single correct prediction.
